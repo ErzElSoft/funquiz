@@ -1,7 +1,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { ChannelMessage, HostStatePayload, GameState } from '../types';
-import { Triangle, Hexagon, Circle, Square, Check, X, Loader2, Send } from 'lucide-react';
+import { Triangle, Hexagon, Circle, Square, Check, X, Loader2, Send, Trophy, Medal, Frown } from 'lucide-react';
 
 const CHANNEL_NAME = 'genhoot_channel';
 
@@ -25,6 +25,7 @@ const PlayerPanel: React.FC = () => {
 
   // Text input state
   const [textAnswer, setTextAnswer] = useState('');
+  const [mySelectedAnswerIdx, setMySelectedAnswerIdx] = useState<number | null>(null);
 
   // --- Connection ---
   useEffect(() => {
@@ -39,7 +40,8 @@ const PlayerPanel: React.FC = () => {
            if (prev?.gameState !== GameState.QUESTION && payload.gameState === GameState.QUESTION) {
                setHasAnswered(false);
                setLastResult(null);
-               setTextAnswer(''); // Reset text input
+               setTextAnswer('');
+               setMySelectedAnswerIdx(null);
            }
            return payload;
         });
@@ -49,7 +51,6 @@ const PlayerPanel: React.FC = () => {
     return () => bc.close();
   }, []);
 
-  const [mySelectedAnswerIdx, setMySelectedAnswerIdx] = useState<number | null>(null);
 
   // Determine result when state changes to REVEAL
   useEffect(() => {
@@ -62,18 +63,15 @@ const PlayerPanel: React.FC = () => {
                 setLastResult('wrong');
             }
         } 
-        // For Text Types (Check if we were marked correct logic is handled host side usually, but here we simulate)
-        // Since we don't know the exact string match logic here easily without sending our answer to host and back,
-        // we'll rely on the Host broadcasting the correct text and we check loosely.
+        // For Text Types
         else if (hostState.resultInfo.correctText && hasAnswered) {
-             // Simplistic check:
              const correct = hostState.resultInfo.correctText.toLowerCase().trim();
              const myAns = textAnswer.toLowerCase().trim();
              if (myAns === correct) setLastResult('correct');
              else setLastResult('wrong');
         }
      }
-  }, [hostState?.gameState, hostState?.resultInfo]);
+  }, [hostState?.gameState, hostState?.resultInfo, hasAnswered, mySelectedAnswerIdx, textAnswer]);
 
 
   // --- Actions ---
@@ -163,6 +161,37 @@ const PlayerPanel: React.FC = () => {
              <div className="mt-8 animate-bounce"><Loader2 className="w-8 h-8" /></div>
         </div>
      );
+  }
+
+  // Game Over / Final Podium
+  if (hostState?.gameState === GameState.FINISH) {
+      // Calculate my rank
+      const allPlayers = hostState.players || [];
+      const sorted = [...allPlayers].sort((a, b) => b.score - a.score);
+      const myRank = sorted.findIndex(p => p.id === playerId) + 1;
+      const myScore = sorted.find(p => p.id === playerId)?.score || 0;
+
+      let rankColor = 'bg-[#46178f]';
+      let msg = "Great Game!";
+      let Icon = Trophy;
+      
+      if (myRank === 1) { rankColor = 'bg-yellow-500'; msg = "WINNER!"; Icon = Trophy; }
+      else if (myRank === 2) { rankColor = 'bg-gray-400'; msg = "2nd Place!"; Icon = Medal; }
+      else if (myRank === 3) { rankColor = 'bg-orange-600'; msg = "3rd Place!"; Icon = Medal; }
+      else { msg = `You placed ${myRank}th`; Icon = Frown; }
+
+      return (
+          <div className={`min-h-screen ${rankColor} flex flex-col items-center justify-center p-8 text-white text-center animate-in zoom-in duration-500`}>
+              <div className="bg-black/20 p-8 rounded-full mb-6">
+                 <Icon className="w-20 h-20" />
+              </div>
+              <h1 className="text-5xl font-black mb-4">{msg}</h1>
+              <div className="bg-black/20 px-8 py-4 rounded-xl">
+                  <p className="text-2xl font-bold opacity-80 mb-1">Final Score</p>
+                  <p className="text-4xl font-black">{myScore}</p>
+              </div>
+          </div>
+      );
   }
 
   // Result Screen
