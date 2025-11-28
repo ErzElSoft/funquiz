@@ -1,0 +1,5 @@
+{
+  "name": "GenHoot - AI Quiz Host",
+  "description": "A Gemini-powered trivia host dashboard simulating a real-time multiplayer quiz experience. Generates quizzes on any topic and simulates player interactions.",
+  "requestFramePermissions": []
+}
