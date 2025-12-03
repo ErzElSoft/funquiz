@@ -1,4 +1,3 @@
-
 import React, { useEffect, useState } from 'react';
 import { Question } from '../types';
 import { Triangle, Hexagon, Circle, Square } from 'lucide-react';
@@ -21,28 +20,20 @@ const SHAPES = [
 const HostGameScreen: React.FC<Props> = ({ question, currentQuestionIndex, totalQuestions, answersCount, onTimerEnd }) => {
   const [timeLeft, setTimeLeft] = useState(question.timeLimit);
 
-  // 1. Initialize/Reset timer ONLY when the question ID or Text changes
   useEffect(() => {
     setTimeLeft(question.timeLimit);
-  }, [question.id, question.text, question.timeLimit]);
-
-  // 2. Countdown Interval - Independent of question or callback
-  useEffect(() => {
     const interval = setInterval(() => {
         setTimeLeft(prev => {
-            if (prev <= 0) return 0;
+            if (prev <= 1) {
+                clearInterval(interval);
+                onTimerEnd();
+                return 0;
+            }
             return prev - 1;
         });
     }, 1000);
     return () => clearInterval(interval);
-  }, []);
-
-  // 3. Trigger End Callback when time reaches 0
-  useEffect(() => {
-    if (timeLeft === 0) {
-        onTimerEnd();
-    }
-  }, [timeLeft, onTimerEnd]);
+  }, [question, onTimerEnd]);
 
   const isTextType = question.type === 'SHORT_ANSWER' || question.type === 'FILL_IN_THE_BLANK';
 
@@ -60,8 +51,8 @@ const HostGameScreen: React.FC<Props> = ({ question, currentQuestionIndex, total
       <div className="flex-1 flex flex-col items-center justify-center mb-8 w-full">
           
           {/* Question Card */}
-          <div className="bg-white text-[#46178f] p-8 md:p-12 rounded-3xl shadow-2xl text-center w-full shadow-purple-900/50 min-h-[200px] flex items-center justify-center mb-8 animate-in zoom-in duration-300">
-              <h2 className="text-3xl md:text-5xl font-black leading-tight drop-shadow-sm">{question.text}</h2>
+          <div className="bg-white text-[#46178f] p-8 md:p-16 rounded-3xl shadow-2xl text-center w-full shadow-purple-900/50 min-h-[250px] flex items-center justify-center mb-12 animate-in zoom-in duration-300">
+              <h2 className="text-4xl md:text-5xl lg:text-6xl font-bold leading-tight drop-shadow-sm">{question.text}</h2>
           </div>
 
           {/* Stats Row */}
@@ -90,21 +81,11 @@ const HostGameScreen: React.FC<Props> = ({ question, currentQuestionIndex, total
                 const Style = SHAPES[idx];
                 const Icon = Style.icon;
                 return (
-                    <div key={idx} className={`${Style.color} rounded-2xl shadow-xl flex flex-col items-center p-3 gap-3 transform transition-transform duration-200 hover:scale-[1.02] border-2 border-white/10 overflow-hidden`}>
-                         {/* Icon Badge */}
-                        <div className="bg-black/20 p-2 rounded-xl shrink-0 self-start absolute top-3 left-3 z-10">
-                            <Icon className="w-6 h-6 text-white fill-current" />
+                    <div key={idx} className={`${Style.color} rounded-2xl shadow-xl flex flex-col md:flex-row items-center p-6 gap-4 transform transition-transform duration-200 hover:scale-[1.02] border-2 border-white/10`}>
+                        <div className="bg-black/20 p-3 rounded-xl shrink-0">
+                            <Icon className="w-8 h-8 md:w-10 md:h-10 text-white fill-current" />
                         </div>
-                        
-                        {question.type === 'IMAGE_CHOICE' ? (
-                            <div className="w-full h-48 bg-white rounded-xl overflow-hidden">
-                                <img src={opt} alt="Option" className="w-full h-full object-cover" />
-                            </div>
-                        ) : (
-                           <div className="flex-1 flex items-center justify-center p-4">
-                               <span className="text-white font-bold text-2xl md:text-3xl leading-tight text-shadow text-center">{opt}</span>
-                           </div>
-                        )}
+                        <span className="text-white font-bold text-2xl md:text-3xl leading-tight text-shadow">{opt}</span>
                     </div>
                 );
             })}

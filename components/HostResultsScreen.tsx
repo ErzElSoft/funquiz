@@ -79,26 +79,11 @@ const HostResultsScreen: React.FC<Props> = ({ question, answers, onNext, isLast 
             <div className="w-full md:w-1/4">
                 <div className="bg-white text-gray-900 p-6 rounded-xl shadow-2xl">
                     <div className="text-sm font-bold text-gray-500 uppercase tracking-wider mb-2">Correct Answer</div>
-                    <div className="flex flex-col items-center gap-3">
-                        {question.type === 'IMAGE_CHOICE' ? (
-                          <div className="w-full h-32 rounded-lg overflow-hidden border-2 border-green-500 relative">
-                             <img 
-                                src={question.options[question.correctIndex]} 
-                                alt="Correct" 
-                                className="w-full h-full object-cover" 
-                             />
-                             <div className="absolute top-2 right-2 bg-green-500 p-1 rounded-full">
-                                <Check className="w-4 h-4 text-white" />
-                             </div>
-                          </div>
-                        ) : (
-                          <div className="flex items-center gap-3 w-full">
-                            <Check className="w-8 h-8 text-green-600 shrink-0" />
-                            <span className="text-2xl font-bold leading-tight break-words">
-                                {isTextType ? question.options[0] : question.options[question.correctIndex]}
-                            </span>
-                          </div>
-                        )}
+                    <div className="flex items-start gap-3">
+                        <Check className="w-8 h-8 text-green-600 shrink-0" />
+                        <span className="text-2xl font-bold leading-tight">
+                            {isTextType ? question.options[0] : question.options[question.correctIndex]}
+                        </span>
                     </div>
                 </div>
             </div>
