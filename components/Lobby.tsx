@@ -38,9 +38,12 @@ const Lobby: React.FC<Props> = ({ pin, players, onStart, onAddFakePlayer }) => {
           {players.map((player) => (
             <div
               key={player.id}
-              className="bg-white text-[#46178f] font-bold px-6 py-3 rounded shadow-lg transform transition hover:scale-105 animate-in zoom-in duration-300"
+              className="bg-white text-[#46178f] font-bold px-6 py-3 rounded shadow-lg transform transition hover:scale-105 animate-in zoom-in duration-300 flex items-center gap-3"
             >
-              {player.name}
+              <span>{player.name}</span>
+              <div className="bg-gray-100 px-2 py-1 rounded text-sm text-[#46178f]/80">
+                {player.score} pts
+              </div>
             </div>
           ))}
           {players.length === 0 && (

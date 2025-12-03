@@ -121,14 +121,14 @@ const PlayerPanel: React.FC = () => {
                 placeholder="Game PIN" 
                 value={pin}
                 onChange={e => setPin(e.target.value)}
-                className="w-full p-4 bg-gray-100 rounded font-bold text-center text-xl border-2 border-transparent focus:border-[#46178f] outline-none"
+                className="w-full p-4 bg-gray-100 text-gray-900 rounded font-bold text-center text-xl border-2 border-transparent focus:border-[#46178f] outline-none"
                 type="number"
               />
               <input 
                 placeholder="Nickname" 
                 value={name}
                 onChange={e => setName(e.target.value)}
-                className="w-full p-4 bg-gray-100 rounded font-bold text-center text-xl border-2 border-transparent focus:border-[#46178f] outline-none"
+                className="w-full p-4 bg-gray-100 text-gray-900 rounded font-bold text-center text-xl border-2 border-transparent focus:border-[#46178f] outline-none"
               />
               <button 
                 disabled={!name || !pin}
