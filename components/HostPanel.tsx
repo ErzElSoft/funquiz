@@ -1,28 +1,25 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { GameState, Quiz, Player, ChannelMessage, HostStatePayload } from '../types';
-import { generateQuizFromTopic } from '../services/geminiService';
-import { Play, Users, Brain, Wand2, Pencil, ArrowLeft, Loader2 } from 'lucide-react';
+import { Play, Users, Pencil, ArrowLeft } from 'lucide-react';
 import HostGameScreen from './HostGameScreen';
 import HostResultsScreen from './HostResultsScreen';
 import Leaderboard from './Leaderboard';
 import QuizCreator from './QuizCreator';
-import Lobby from './Lobby'; // Import Lobby component instead of inline
+import Lobby from './Lobby';
 
 const CHANNEL_NAME = 'genhoot_channel';
 
 const HostPanel: React.FC = () => {
   const [gameState, setGameState] = useState<GameState>(GameState.MENU);
-  const [menuView, setMenuView] = useState<'SELECTION' | 'AI_SETUP' | 'MANUAL_SETUP'>('SELECTION');
+  const [menuView, setMenuView] = useState<'SELECTION' | 'MANUAL_SETUP'>('SELECTION');
   
   const [pin, setPin] = useState<string>("");
-  const [topic, setTopic] = useState('');
   const [quiz, setQuiz] = useState<Quiz | null>(null);
   const [players, setPlayers] = useState<Player[]>([]);
   const [currentQuestionIndex, setCurrentQuestionIndex] = useState(0);
   
   const [currentAnswers, setCurrentAnswers] = useState<Record<string, { index?: number; text?: string }>>({});
   
-  const [isGenerating, setIsGenerating] = useState(false);
   const [channel, setChannel] = useState<BroadcastChannel | null>(null);
   const [timeLeft, setTimeLeft] = useState(0);
 
@@ -99,33 +96,6 @@ const HostPanel: React.FC = () => {
       startLobby();
   };
 
-  const generateQuiz = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!topic) return;
-    setIsGenerating(true);
-    try {
-      const data = await generateQuizFromTopic(topic);
-      const newQuiz: Quiz = {
-        title: data.title,
-        topic,
-        questions: data.questions.map((q, i) => ({
-          id: `q-${i}`,
-          type: q.type as any,
-          text: q.questionText,
-          options: q.options,
-          correctIndex: q.correctOptionIndex,
-          timeLimit: q.timeLimitSeconds
-        }))
-      };
-      setQuiz(newQuiz);
-      startLobby();
-    } catch (err) {
-      alert("Failed to generate quiz. Try again.");
-    } finally {
-      setIsGenerating(false);
-    }
-  };
-
   const startLobby = () => {
     const newPin = Math.floor(100000 + Math.random() * 900000).toString();
     setPin(newPin);
@@ -189,7 +159,6 @@ const HostPanel: React.FC = () => {
     setPlayers([]);
     setQuiz(null);
     setPin("");
-    setTopic("");
     setCurrentAnswers({});
     setCurrentQuestionIndex(0);
   };
@@ -209,68 +178,29 @@ const HostPanel: React.FC = () => {
       <div className="flex flex-col items-center justify-center min-h-screen p-4 text-white relative z-10">
         
         {menuView === 'SELECTION' && (
-             <div className="bg-white/10 backdrop-blur-xl p-10 rounded-3xl shadow-2xl max-w-5xl w-full border border-white/20 animate-in zoom-in duration-300">
-                <div className="text-center mb-16">
+             <div className="bg-white/10 backdrop-blur-xl p-10 rounded-3xl shadow-2xl max-w-2xl w-full border border-white/20 animate-in zoom-in duration-300">
+                <div className="text-center mb-12">
                      <h1 className="text-5xl font-black mb-4 tracking-tight drop-shadow-md">Host Dashboard</h1>
-                     <p className="text-white/70 text-xl font-medium">How would you like to create your quiz today?</p>
+                     <p className="text-white/70 text-xl font-medium">Ready to challenge your players?</p>
                 </div>
                 
-                <div className="grid md:grid-cols-2 gap-8">
-                    <button 
-                        onClick={() => setMenuView('AI_SETUP')}
-                        className="group bg-gradient-to-br from-purple-600/40 to-blue-600/40 hover:from-purple-600 hover:to-blue-600 text-left p-8 rounded-2xl border border-white/10 hover:border-white/50 transition-all duration-300 shadow-lg hover:shadow-purple-500/50 hover:-translate-y-1"
-                    >
-                        <div className="bg-white w-16 h-16 rounded-2xl flex items-center justify-center mb-6 shadow-inner group-hover:scale-110 transition-transform">
-                            <Wand2 className="w-8 h-8 text-[#46178f]" />
-                        </div>
-                        <h3 className="text-3xl font-black mb-2">Generate with AI</h3>
-                        <p className="text-purple-100 group-hover:text-white text-lg">Instant quiz creation. Just enter a topic and let Gemini do the magic.</p>
-                    </button>
-
+                <div className="flex justify-center">
                     <button 
                         onClick={() => setMenuView('MANUAL_SETUP')}
-                        className="group bg-gradient-to-br from-blue-600/40 to-cyan-600/40 hover:from-blue-600 hover:to-cyan-600 text-left p-8 rounded-2xl border border-white/10 hover:border-white/50 transition-all duration-300 shadow-lg hover:shadow-cyan-500/50 hover:-translate-y-1"
+                        className="group w-full bg-gradient-to-br from-blue-600/80 to-purple-600/80 hover:from-blue-600 hover:to-purple-600 text-left p-8 rounded-2xl border border-white/10 hover:border-white/50 transition-all duration-300 shadow-xl hover:shadow-purple-500/50 hover:-translate-y-1"
                     >
-                        <div className="bg-white w-16 h-16 rounded-2xl flex items-center justify-center mb-6 shadow-inner group-hover:scale-110 transition-transform">
-                            <Pencil className="w-8 h-8 text-blue-600" />
+                        <div className="flex items-center gap-6">
+                            <div className="bg-white w-20 h-20 rounded-2xl flex items-center justify-center shadow-inner group-hover:scale-110 transition-transform shrink-0">
+                                <Pencil className="w-10 h-10 text-blue-600" />
+                            </div>
+                            <div>
+                                <h3 className="text-3xl font-black mb-2">Create New Quiz</h3>
+                                <p className="text-blue-100 group-hover:text-white text-lg leading-tight">Design custom questions, set timers, and host your game.</p>
+                            </div>
                         </div>
-                        <h3 className="text-3xl font-black mb-2">Create Manually</h3>
-                        <p className="text-blue-100 group-hover:text-white text-lg">Full control. Custom questions, timers, and answer types.</p>
                     </button>
                 </div>
              </div>
-        )}
-
-        {menuView === 'AI_SETUP' && (
-            <div className="bg-white/10 backdrop-blur-xl p-8 rounded-3xl shadow-2xl max-w-lg w-full border border-white/20 animate-in slide-in-from-right duration-500">
-                <button onClick={() => setMenuView('SELECTION')} className="text-white/70 hover:text-white mb-8 flex items-center gap-2 font-bold transition-colors">
-                    <ArrowLeft className="w-5 h-5" /> Back to Menu
-                </button>
-                <div className="flex items-center gap-4 mb-8">
-                    <div className="bg-white p-3 rounded-2xl shadow-lg"><Brain className="w-10 h-10 text-[#46178f]" /></div>
-                    <h1 className="text-4xl font-black">AI Generator</h1>
-                </div>
-                
-                <form onSubmit={generateQuiz} className="space-y-6">
-                    <div>
-                        <label className="block font-bold mb-3 text-lg uppercase tracking-wider text-purple-200">What's the topic?</label>
-                        <input 
-                            value={topic}
-                            onChange={e => setTopic(e.target.value)}
-                            placeholder="e.g. 80s Movies, Quantum Physics, Taylor Swift..."
-                            className="w-full p-5 rounded-2xl bg-black/20 border-2 border-white/10 text-white font-bold text-xl placeholder:text-white/30 focus:outline-none focus:border-purple-400 focus:bg-black/30 transition-all"
-                            autoFocus
-                        />
-                    </div>
-                    <button 
-                        disabled={isGenerating || !topic}
-                        className="w-full bg-white text-[#46178f] font-black text-xl py-5 rounded-2xl hover:scale-[1.02] active:scale-95 transition-all shadow-xl disabled:opacity-50 disabled:scale-100 flex justify-center items-center gap-3"
-                    >
-                        {isGenerating ? <Loader2 className="animate-spin w-6 h-6" /> : <Play fill="currentColor" className="w-6 h-6" />}
-                        {isGenerating ? "Gemini is thinking..." : "Generate Quiz"}
-                    </button>
-                </form>
-            </div>
         )}
 
         <footer className="absolute bottom-4 text-white/50 text-sm font-medium z-20">

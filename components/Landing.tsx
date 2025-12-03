@@ -13,7 +13,7 @@ const Landing: React.FC<Props> = ({ onSelectMode }) => {
                     <Zap className="w-10 h-10 text-yellow-300 fill-current animate-pulse" />
                     <h1 className="text-7xl font-black tracking-tighter drop-shadow-lg">ErzEl Quiz</h1>
                 </div>
-                <p className="text-2xl font-bold opacity-90 text-purple-200">AI-Powered Quiz Platform</p>
+                <p className="text-2xl font-bold opacity-90 text-purple-200">Learning and fun platform</p>
             </div>
 
             <div className="grid md:grid-cols-2 gap-8 max-w-5xl w-full mb-16">
