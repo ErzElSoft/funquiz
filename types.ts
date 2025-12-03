@@ -30,12 +30,13 @@ export interface Player {
   score: number;
   streak: number;
   lastAnswerCorrect?: boolean;
+  avatar?: string;
 }
 
 // Communication Protocol
 export type ChannelMessage = 
   | { type: 'HOST_STATE_UPDATE'; payload: HostStatePayload }
-  | { type: 'PLAYER_JOIN'; payload: { name: string; pin: string; id: string } }
+  | { type: 'PLAYER_JOIN'; payload: { name: string; pin: string; id: string; avatar?: string } }
   | { type: 'PLAYER_ANSWER'; payload: { playerId: string; answerIndex?: number; answerText?: string; timeRemaining: number } };
 
 export interface HostStatePayload {

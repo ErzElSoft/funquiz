@@ -52,7 +52,7 @@ const HostGameScreen: React.FC<Props> = ({ question, currentQuestionIndex, total
           
           {/* Question Card */}
           <div className="bg-white text-[#46178f] p-8 md:p-16 rounded-3xl shadow-2xl text-center w-full shadow-purple-900/50 min-h-[250px] flex items-center justify-center mb-12 animate-in zoom-in duration-300">
-              <h2 className="text-4xl md:text-5xl lg:text-6xl font-black leading-tight drop-shadow-sm">{question.text}</h2>
+              <h2 className="text-4xl md:text-5xl lg:text-6xl font-bold leading-tight drop-shadow-sm">{question.text}</h2>
           </div>
 
           {/* Stats Row */}

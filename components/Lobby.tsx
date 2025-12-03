@@ -14,15 +14,15 @@ const Lobby: React.FC<Props> = ({ pin, players, onStart }) => {
     <div className="flex flex-col h-screen w-full p-8 relative z-10">
       
       {/* Header Info */}
-      <div className="flex justify-between items-start mb-12">
+      <div className="flex justify-center items-center mb-12 relative">
         <div className="bg-white/10 backdrop-blur-md border border-white/20 p-8 rounded-3xl text-center shadow-2xl animate-in slide-in-from-top">
-          <p className="text-xl font-bold opacity-80 mb-2 uppercase tracking-widest">Join at genhoot.com</p>
+          <p className="text-xl font-bold opacity-80 mb-2 uppercase tracking-widest">Game PIN</p>
           <div className="bg-white text-[#46178f] px-8 py-2 rounded-xl inline-block transform -rotate-2 hover:rotate-0 transition-transform duration-300">
              <p className="text-7xl font-black tracking-widest drop-shadow-sm">{pin}</p>
           </div>
         </div>
         
-        <div className="bg-black/20 backdrop-blur-md px-8 py-4 rounded-2xl flex items-center gap-4 border border-white/10 animate-in slide-in-from-right">
+        <div className="absolute right-0 bg-black/20 backdrop-blur-md px-8 py-4 rounded-2xl flex items-center gap-4 border border-white/10 animate-in slide-in-from-right">
           <Users className="w-8 h-8 opacity-80" />
           <span className="text-4xl font-black">{players.length}</span>
         </div>
@@ -38,12 +38,21 @@ const Lobby: React.FC<Props> = ({ pin, players, onStart }) => {
              const randomRotate = rotations[idx % rotations.length];
              const randomColor = colors[idx % colors.length];
 
+             const isCustomPhoto = player.avatar?.startsWith('data:image');
+             
              return (
                 <div
                 key={player.id}
                 className={`${randomColor} text-white font-black px-6 py-4 rounded-xl shadow-lg transform ${randomRotate} hover:scale-110 hover:z-10 hover:rotate-0 transition-all duration-300 animate-in zoom-in flex items-center gap-3 border-2 border-white/20`}
                 style={{ animationDelay: `${idx * 100}ms` }}
                 >
+                {player.avatar && (
+                  isCustomPhoto ? (
+                    <img src={player.avatar} alt={player.name} className="w-10 h-10 rounded-full object-cover border-2 border-white/50" />
+                  ) : (
+                    <span className="text-3xl">{player.avatar}</span>
+                  )
+                )}
                 <span className="text-xl text-shadow">{player.name}</span>
                 <div className="bg-black/20 px-2 py-1 rounded text-sm font-bold">
                     {player.score}
