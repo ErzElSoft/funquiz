@@ -71,12 +71,12 @@ const HostPanel: React.FC = () => {
 
   const handleMessage = (msg: ChannelMessage) => {
     if (msg.type === 'PLAYER_JOIN') {
-      const { name, pin: joinedPin, id, avatar } = msg.payload;
+      const { name, pin: joinedPin, id } = msg.payload;
       setPin(currentPin => {
           if (joinedPin === currentPin) {
              setPlayers(prev => {
                 if (prev.find(p => p.id === id)) return prev;
-                return [...prev, { id, name, score: 0, streak: 0, avatar }];
+                return [...prev, { id, name, score: 0, streak: 0 }];
              });
           }
           return currentPin;

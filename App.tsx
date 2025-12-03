@@ -1,20 +1,20 @@
-import React from 'react';
-import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
+import React, { useState } from 'react';
 import Landing from './components/Landing';
 import HostPanel from './components/HostPanel';
 import PlayerPanel from './components/PlayerPanel';
 
 const App: React.FC = () => {
-  return (
-    <BrowserRouter>
-      <Routes>
-        <Route path="/" element={<Landing />} />
-        <Route path="/host" element={<HostPanel />} />
-        <Route path="/join" element={<PlayerPanel />} />
-        <Route path="*" element={<Navigate to="/" replace />} />
-      </Routes>
-    </BrowserRouter>
-  );
+  const [mode, setMode] = useState<'LANDING' | 'HOST' | 'PLAYER'>('LANDING');
+
+  if (mode === 'HOST') {
+    return <HostPanel />;
+  }
+
+  if (mode === 'PLAYER') {
+    return <PlayerPanel />;
+  }
+
+  return <Landing onSelectMode={setMode} />;
 };
 
 export default App;

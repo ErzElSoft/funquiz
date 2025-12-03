@@ -1,7 +1,7 @@
 
 import React, { useState } from 'react';
 import { Quiz, Question, QuestionType } from '../types';
-import { Plus, Trash2, Save, CheckCircle, Circle, Clock, Type, FileText, ArrowLeft, LayoutGrid, ToggleLeft } from 'lucide-react';
+import { Plus, Trash2, Save, CheckCircle, Circle, Type, FileText, ArrowLeft, LayoutGrid, ToggleLeft, Image as ImageIcon, Upload, X } from 'lucide-react';
 
 interface Props {
   onSave: (quiz: Quiz) => void;
@@ -44,6 +44,10 @@ const QuizCreator: React.FC<Props> = ({ onSave, onCancel }) => {
       setQOptions(['', '', '', '']);
       setQCorrectIdx(null);
       setQAnswerText('');
+    } else if (type === 'IMAGE_CHOICE') {
+      setQOptions(['', '', '', '']); // Empty strings for Base64 data
+      setQCorrectIdx(null);
+      setQAnswerText('');
     } else {
       // Text types
       setQOptions([]);
@@ -58,6 +62,18 @@ const QuizCreator: React.FC<Props> = ({ onSave, onCancel }) => {
     setQOptions(newOpts);
   };
 
+  const handleImageUpload = (idx: number, e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        const base64 = reader.result as string;
+        handleOptionChange(idx, base64);
+      };
+      reader.readAsDataURL(file);
+    }
+  };
+
   const isTextType = qType === 'SHORT_ANSWER' || qType === 'FILL_IN_THE_BLANK';
 
   const isFormValid = (() => {
@@ -67,7 +83,8 @@ const QuizCreator: React.FC<Props> = ({ onSave, onCancel }) => {
         return qAnswerText.trim().length > 0;
     }
 
-    // MC or TF
+    // MC or TF or IMAGE
+    // For Image choice, options must have content (base64 string)
     return qCorrectIdx !== null && qOptions.every(o => o.trim().length > 0);
   })();
 
@@ -226,23 +243,24 @@ const QuizCreator: React.FC<Props> = ({ onSave, onCancel }) => {
                  {/* Type Selector */}
                  <div className="bg-white/10 backdrop-blur-md rounded-2xl p-4 border border-white/10">
                     <label className="text-xs font-bold text-purple-200 uppercase tracking-wider mb-3 block">Question Type</label>
-                    <div className="grid grid-cols-2 gap-2">
+                    <div className="grid grid-cols-3 gap-2">
                         {[
                             { id: 'MULTIPLE_CHOICE', label: 'Quiz', icon: LayoutGrid },
                             { id: 'TRUE_FALSE', label: 'True/False', icon: ToggleLeft },
-                            { id: 'SHORT_ANSWER', label: 'Short Answer', icon: Type },
+                            { id: 'IMAGE_CHOICE', label: 'Image', icon: ImageIcon },
+                            { id: 'SHORT_ANSWER', label: 'Short Ans', icon: Type },
                             { id: 'FILL_IN_THE_BLANK', label: 'Fill Blank', icon: FileText },
                         ].map((type) => (
                             <button
                                 key={type.id}
                                 onClick={() => handleTypeChange(type.id as QuestionType)}
-                                className={`flex items-center justify-center gap-2 p-3 rounded-lg text-sm font-bold transition-all ${
+                                className={`flex flex-col items-center justify-center gap-1 p-2 rounded-lg text-xs font-bold transition-all ${
                                     qType === type.id 
                                     ? 'bg-white text-[#46178f] shadow-lg scale-105' 
                                     : 'bg-black/20 text-white/60 hover:bg-black/30 hover:text-white'
                                 }`}
                             >
-                                <type.icon className="w-4 h-4" /> {type.label}
+                                <type.icon className="w-5 h-5" /> <span className="text-center leading-none">{type.label}</span>
                             </button>
                         ))}
                     </div>
@@ -275,7 +293,11 @@ const QuizCreator: React.FC<Props> = ({ onSave, onCancel }) => {
                     <h3 className="text-xl font-bold flex items-center justify-center gap-2">
                         {isTextType ? "Set Correct Answer" : "Set Options"}
                     </h3>
-                    <p className="text-white/50 text-sm">{isTextType ? "Players must type this exactly" : "Click the circle to mark correct answer"}</p>
+                    <p className="text-white/50 text-sm">
+                       {isTextType && "Players must type this exactly"}
+                       {!isTextType && qType !== 'IMAGE_CHOICE' && "Click circle to mark correct"}
+                       {qType === 'IMAGE_CHOICE' && "Upload images and click circle to mark correct"}
+                    </p>
                   </div>
 
                   {isTextType ? (
@@ -304,22 +326,50 @@ const QuizCreator: React.FC<Props> = ({ onSave, onCancel }) => {
                             return (
                                 <div key={idx} className={`relative group transition-transform duration-200 ${isSelected ? 'scale-[1.02]' : ''}`}>
                                     <div className={`flex items-center rounded-2xl overflow-hidden shadow-lg border-2 ${isSelected ? 'border-white' : 'border-transparent'}`}>
-                                        <div className={`w-14 h-full flex items-center justify-center ${baseColor} min-h-[80px]`}>
+                                        <div className={`w-14 self-stretch flex items-center justify-center ${baseColor} min-h-[80px]`}>
                                             <span className="text-2xl font-bold text-white/90">
                                                 {qType === 'TRUE_FALSE' ? (idx === 0 ? 'T' : 'F') : ['▲', '◆', '●', '■'][idx]}
                                             </span>
                                         </div>
-                                        <div className="flex-1 bg-white relative">
-                                            <input
-                                                value={opt}
-                                                onChange={e => handleOptionChange(idx, e.target.value)}
-                                                readOnly={qType === 'TRUE_FALSE'}
-                                                placeholder={`Option ${idx + 1}`}
-                                                className={`w-full h-full p-4 text-gray-900 font-bold text-lg outline-none ${qType === 'TRUE_FALSE' ? 'cursor-default' : ''}`}
-                                            />
+                                        <div className="flex-1 bg-white relative h-32">
+                                            {qType === 'IMAGE_CHOICE' ? (
+                                                <div className="w-full h-full relative bg-gray-100 flex items-center justify-center group-hover:bg-gray-200 transition-colors">
+                                                    {opt ? (
+                                                        <>
+                                                            <img src={opt} alt="Option" className="w-full h-full object-cover" />
+                                                            <button 
+                                                                onClick={() => handleOptionChange(idx, "")}
+                                                                className="absolute top-2 left-2 bg-black/50 hover:bg-red-500 p-1 rounded-full text-white transition-colors z-10"
+                                                            >
+                                                                <X className="w-4 h-4" />
+                                                            </button>
+                                                        </>
+                                                    ) : (
+                                                        <div className="flex flex-col items-center justify-center text-gray-400">
+                                                            <Upload className="w-8 h-8 mb-1" />
+                                                            <span className="text-xs font-bold">Upload Image</span>
+                                                        </div>
+                                                    )}
+                                                    <input 
+                                                        type="file"
+                                                        accept="image/*"
+                                                        className="absolute inset-0 opacity-0 cursor-pointer"
+                                                        onChange={(e) => handleImageUpload(idx, e)}
+                                                    />
+                                                </div>
+                                            ) : (
+                                                <input
+                                                    value={opt}
+                                                    onChange={e => handleOptionChange(idx, e.target.value)}
+                                                    readOnly={qType === 'TRUE_FALSE'}
+                                                    placeholder={`Option ${idx + 1}`}
+                                                    className={`w-full h-full p-4 text-gray-900 font-bold text-lg outline-none ${qType === 'TRUE_FALSE' ? 'cursor-default' : ''}`}
+                                                />
+                                            )}
+                                            
                                             <button
                                                 onClick={() => setQCorrectIdx(idx)}
-                                                className={`absolute right-2 top-1/2 -translate-y-1/2 p-2 rounded-full transition-all ${isSelected ? 'text-green-500 scale-110' : 'text-gray-300 hover:text-gray-400'}`}
+                                                className={`absolute right-2 top-1/2 -translate-y-1/2 p-2 rounded-full transition-all z-20 shadow-sm bg-white/50 hover:bg-white ${isSelected ? 'text-green-500 scale-110' : 'text-gray-400 hover:text-gray-600'}`}
                                             >
                                                 {isSelected ? <CheckCircle className="w-8 h-8 fill-current" /> : <Circle className="w-8 h-8" />}
                                             </button>

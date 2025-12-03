@@ -7,13 +7,13 @@ export enum GameState {
   FINISH = 'FINISH'
 }
 
-export type QuestionType = 'MULTIPLE_CHOICE' | 'TRUE_FALSE' | 'SHORT_ANSWER' | 'FILL_IN_THE_BLANK';
+export type QuestionType = 'MULTIPLE_CHOICE' | 'TRUE_FALSE' | 'SHORT_ANSWER' | 'FILL_IN_THE_BLANK' | 'IMAGE_CHOICE';
 
 export interface Question {
   id: string;
   type: QuestionType;
   text: string;
-  options: string[]; // MC/TF: Choices. Text: Acceptable answers.
+  options: string[]; // MC/TF: Choices. Text: Acceptable answers. Image: Base64 strings.
   correctIndex: number; // -1 for Text types
   timeLimit: number;
 }
@@ -30,13 +30,12 @@ export interface Player {
   score: number;
   streak: number;
   lastAnswerCorrect?: boolean;
-  avatar?: string;
 }
 
 // Communication Protocol
 export type ChannelMessage = 
   | { type: 'HOST_STATE_UPDATE'; payload: HostStatePayload }
-  | { type: 'PLAYER_JOIN'; payload: { name: string; pin: string; id: string; avatar?: string } }
+  | { type: 'PLAYER_JOIN'; payload: { name: string; pin: string; id: string } }
   | { type: 'PLAYER_ANSWER'; payload: { playerId: string; answerIndex?: number; answerText?: string; timeRemaining: number } };
 
 export interface HostStatePayload {
