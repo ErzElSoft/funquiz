@@ -1,13 +1,13 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { GameState, Quiz, Player, ChannelMessage, HostStatePayload } from '../types';
+import { GameState, Quiz, Player, HostStatePayload } from '../types';
 import { Play, Users, Pencil, ArrowLeft } from 'lucide-react';
 import HostGameScreen from './HostGameScreen';
 import HostResultsScreen from './HostResultsScreen';
 import Leaderboard from './Leaderboard';
 import QuizCreator from './QuizCreator';
 import Lobby from './Lobby';
-
-const CHANNEL_NAME = 'genhoot_channel';
+import Footer from './Footer';
+import { createGame, updateHostState, listenToPlayers, listenToAnswers, clearAnswers } from '../services/gameService';
 
 const HostPanel: React.FC = () => {
   const [gameState, setGameState] = useState<GameState>(GameState.MENU);
@@ -203,9 +203,7 @@ const HostPanel: React.FC = () => {
              </div>
         )}
 
-        <footer className="absolute bottom-4 text-white/50 text-sm font-medium z-20">
-          Powered by ErzEl Soft - <a href="https://www.erzelsoft.com" target="_blank" rel="noreferrer" className="hover:text-white underline decoration-white/30 transition-colors">www.erzelsoft.com</a>
-        </footer>
+        <Footer />
       </div>
     );
   }
@@ -261,6 +259,7 @@ const HostPanel: React.FC = () => {
               />
           )}
        </main>
+       <Footer />
     </div>
   );
 };

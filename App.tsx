@@ -6,7 +6,7 @@ import PlayerPanel from './components/PlayerPanel';
 
 const App: React.FC = () => {
   return (
-    <BrowserRouter>
+    <BrowserRouter basename="/quiz">
       <Routes>
         <Route path="/" element={<Landing />} />
         <Route path="/host" element={<HostPanel />} />
