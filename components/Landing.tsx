@@ -5,7 +5,7 @@ import { Smartphone, MonitorPlay } from 'lucide-react';
 const Landing: React.FC = () => {
     const navigate = useNavigate();
     return (
-        <div className="min-h-screen flex flex-col items-center justify-center p-8 pb-24 text-white relative z-10">
+        <div className="min-h-screen flex flex-col items-center justify-center p-8 pb-32 text-white relative z-10">
             {/* Title Section */}
             <div className="text-center mb-16">
                 <h1 className="text-8xl font-semibold tracking-tight text-white mb-4">

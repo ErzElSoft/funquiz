@@ -156,7 +156,7 @@ const PlayerPanel: React.FC = () => {
 
   if (!joined) {
     return (
-      <div className="min-h-screen flex flex-col items-center justify-center p-4 pb-24 relative z-10">
+      <div className="min-h-screen flex flex-col items-center justify-center p-4 pb-32 relative z-10">
         <div className="bg-white rounded-3xl p-10 w-full max-w-md shadow-[0_20px_60px_rgba(0,0,0,0.5)] border-2 border-white/20">
            <div className="text-center mb-8">
              <h1 className="text-4xl font-semibold text-[#46178f] mb-2">Quiz</h1>
