@@ -5,13 +5,13 @@ import { Smartphone, MonitorPlay } from 'lucide-react';
 const Landing: React.FC = () => {
     const navigate = useNavigate();
     return (
-        <div className="min-h-screen flex flex-col items-center justify-center p-8 text-white relative z-10">
+        <div className="min-h-screen flex flex-col items-center justify-center p-8 pb-24 text-white relative z-10">
             {/* Title Section */}
             <div className="text-center mb-16">
-                <h1 className="text-8xl font-black tracking-tight text-white drop-shadow-[0_4px_20px_rgba(0,0,0,0.9)] mb-4" style={{textShadow: '0 0 40px rgba(255,255,255,0.5)'}}>
+                <h1 className="text-8xl font-semibold tracking-tight text-white mb-4">
                     Quiz
                 </h1>
-                <p className="text-2xl font-semibold text-white drop-shadow-[0_2px_10px_rgba(0,0,0,0.8)]">
+                <p className="text-2xl font-semibold text-white">
                     Learning and fun platform
                 </p>
             </div>
@@ -28,8 +28,8 @@ const Landing: React.FC = () => {
                             <MonitorPlay className="w-14 h-14 text-purple-600" strokeWidth={2.5} />
                         </div>
                         <div className="text-center">
-                            <h2 className="text-5xl font-black mb-3 text-white drop-shadow-[0_4px_12px_rgba(0,0,0,0.8)]">Host</h2>
-                            <p className="text-white/95 font-semibold text-xl drop-shadow-[0_2px_8px_rgba(0,0,0,0.8)]">
+                            <h2 className="text-5xl font-semibold mb-3 text-white">Host</h2>
+                            <p className="text-white/95 font-semibold text-xl">
                                 Create & Host a game on the big screen
                             </p>
                         </div>
@@ -46,18 +46,21 @@ const Landing: React.FC = () => {
                             <Smartphone className="w-14 h-14 text-green-600" strokeWidth={2.5} />
                         </div>
                         <div className="text-center">
-                            <h2 className="text-5xl font-black mb-3 text-white drop-shadow-[0_4px_12px_rgba(0,0,0,0.8)]">Join</h2>
-                            <p className="text-white/95 font-semibold text-xl drop-shadow-[0_2px_8px_rgba(0,0,0,0.8)]">
+                            <h2 className="text-5xl font-semibold mb-3 text-white">Join</h2>
+                            <p className="text-white/95 font-semibold text-xl">
                                 Enter PIN to play on your device
                             </p>
                         </div>
                     </div>
                 </button>
             </div>
-
+            
             {/* Footer */}
-            <footer className="absolute bottom-6 text-white text-sm font-semibold z-20 bg-black/70 backdrop-blur-lg px-8 py-4 rounded-full border border-white/30 shadow-[0_8px_32px_rgba(0,0,0,0.6)]">
-              Powered by <span className="font-bold">ErzEl Soft</span> - <a href="https://www.erzelsoft.com" target="_blank" rel="noreferrer" className="hover:text-yellow-400 transition-colors font-bold">www.erzelsoft.com</a>
+            <footer className="fixed bottom-0 left-0 right-0 w-full text-white text-base font-semibold z-[100] bg-black/80 backdrop-blur-lg py-4 border-t border-white/20 shadow-[0_-4px_32px_rgba(0,0,0,0.6)]">
+              <div className="container mx-auto px-8 flex flex-col items-center justify-center gap-2">
+                <img src="/images/erzelsoft-logo.png" alt="ErzEl Soft" className="h-12" />
+                <a href="https://www.erzelsoft.com" target="_blank" rel="noreferrer" className="hover:text-yellow-400 transition-colors font-bold text-sm">www.erzelsoft.com</a>
+              </div>
             </footer>
         </div>
     );

@@ -180,7 +180,7 @@ const HostPanel: React.FC = () => {
         {menuView === 'SELECTION' && (
              <div className="bg-white/10 backdrop-blur-xl p-10 rounded-3xl shadow-2xl max-w-2xl w-full border border-white/20 animate-in zoom-in duration-300">
                 <div className="text-center mb-12">
-                     <h1 className="text-5xl font-black mb-4 tracking-tight drop-shadow-md">Host Dashboard</h1>
+                     <h1 className="text-5xl font-semibold mb-4 tracking-tight">Host Dashboard</h1>
                      <p className="text-white/70 text-xl font-medium">Ready to challenge your players?</p>
                 </div>
                 
@@ -194,7 +194,7 @@ const HostPanel: React.FC = () => {
                                 <Pencil className="w-10 h-10 text-blue-600" />
                             </div>
                             <div>
-                                <h3 className="text-3xl font-black mb-2">Create New Quiz</h3>
+                                <h3 className="text-3xl font-semibold mb-2">Create New Quiz</h3>
                                 <p className="text-blue-100 group-hover:text-white text-lg leading-tight">Design custom questions, set timers, and host your game.</p>
                             </div>
                         </div>

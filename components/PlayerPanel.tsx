@@ -156,11 +156,11 @@ const PlayerPanel: React.FC = () => {
 
   if (!joined) {
     return (
-      <div className="min-h-screen flex flex-col items-center justify-center p-4 relative z-10">
+      <div className="min-h-screen flex flex-col items-center justify-center p-4 pb-24 relative z-10">
         <div className="bg-white rounded-3xl p-10 w-full max-w-md shadow-[0_20px_60px_rgba(0,0,0,0.5)] border-2 border-white/20">
            <div className="text-center mb-8">
-             <h1 className="text-4xl font-black text-[#46178f] mb-2">Quiz</h1>
-             <p className="text-gray-500 font-bold text-sm uppercase tracking-wider">Enter Game Details</p>
+             <h1 className="text-4xl font-semibold text-[#46178f] mb-2">Quiz</h1>
+             <p className="text-gray-500 font-semibold text-sm uppercase tracking-wider">Enter Game Details</p>
            </div>
            <form onSubmit={joinGame} className="space-y-5">
               <input 
@@ -263,8 +263,13 @@ const PlayerPanel: React.FC = () => {
               </button>
            </form>
         </div>
-        <footer className="mt-8 text-white text-sm font-semibold bg-black/60 backdrop-blur-md px-8 py-4 rounded-full border border-white/30 shadow-xl">
-            Powered by <span className="font-bold">ErzEl Soft</span> - <a href="https://www.erzelsoft.com" target="_blank" rel="noreferrer" className="hover:text-yellow-400 transition-colors font-bold">www.erzelsoft.com</a>
+        
+        {/* Footer */}
+        <footer className="fixed bottom-0 left-0 right-0 w-full text-white text-base font-semibold z-[100] bg-black/80 backdrop-blur-lg py-4 border-t border-white/20 shadow-[0_-4px_32px_rgba(0,0,0,0.6)]">
+          <div className="container mx-auto px-8 flex flex-col items-center justify-center gap-2">
+            <img src="/images/erzelsoft-logo.png" alt="ErzEl Soft" className="h-12" />
+            <a href="https://www.erzelsoft.com" target="_blank" rel="noreferrer" className="hover:text-yellow-400 transition-colors font-bold text-sm">www.erzelsoft.com</a>
+          </div>
         </footer>
       </div>
     );

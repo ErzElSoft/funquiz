@@ -16,7 +16,7 @@ const Lobby: React.FC<Props> = ({ pin, players, onStart }) => {
       {/* Header Info */}
       <div className="flex justify-center items-center mb-12 relative">
         <div className="bg-white/10 backdrop-blur-md border border-white/20 p-8 rounded-3xl text-center shadow-2xl animate-in slide-in-from-top">
-          <p className="text-xl font-bold opacity-80 mb-2 uppercase tracking-widest">Game PIN</p>
+          <p className="text-xl font-semibold opacity-80 mb-2 uppercase tracking-widest">Game PIN</p>
           <div className="bg-white text-[#46178f] px-8 py-2 rounded-xl inline-block transform -rotate-2 hover:rotate-0 transition-transform duration-300">
              <p className="text-7xl font-black tracking-widest drop-shadow-sm">{pin}</p>
           </div>
