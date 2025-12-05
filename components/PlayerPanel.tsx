@@ -1,9 +1,8 @@
 import React, { useState, useEffect } from 'react';
-import { ChannelMessage, HostStatePayload, GameState } from '../types';
+import { HostStatePayload, GameState } from '../types';
 import { Triangle, Hexagon, Circle, Square, Check, X, Loader2, Send, Trophy, Medal, Frown, User, Cat, Dog, Smile, Heart, Star, Zap, Flame } from 'lucide-react';
 import Footer from './Footer';
-
-const CHANNEL_NAME = 'genhoot_channel';
+import { joinGame as firebaseJoinGame, listenToHostState, submitAnswer as firebaseSubmitAnswer, checkGameExists } from '../services/gameService';
 
 const SHAPES = [
   { color: 'bg-red-500', icon: Triangle, shadow: 'shadow-red-900' },
@@ -37,7 +36,6 @@ const PlayerPanel: React.FC = () => {
   const [playerId] = useState(() => `player-${Math.random().toString(36).substr(2, 9)}`);
   
   const [hostState, setHostState] = useState<HostStatePayload | null>(null);
-  const [channel, setChannel] = useState<BroadcastChannel | null>(null);
   const [hasAnswered, setHasAnswered] = useState(false);
   const [lastResult, setLastResult] = useState<'correct' | 'wrong' | null>(null);
 
@@ -48,25 +46,26 @@ const PlayerPanel: React.FC = () => {
   const canvasRef = React.useRef<HTMLCanvasElement>(null);
 
   useEffect(() => {
-    const bc = new BroadcastChannel(CHANNEL_NAME);
-    bc.onmessage = (event) => {
-      const msg = event.data as ChannelMessage;
-      if (msg.type === 'HOST_STATE_UPDATE') {
-        const payload = msg.payload;
+    if (joined && pin) {
+      console.log('Player listening to hostState for PIN:', pin);
+      const unsubscribe = listenToHostState(pin, (state) => {
+        console.log('Received hostState:', state);
         setHostState(prev => {
-           if (prev?.gameState !== GameState.QUESTION && payload.gameState === GameState.QUESTION) {
-               setHasAnswered(false);
-               setLastResult(null);
-               setTextAnswer('');
-               setMySelectedAnswerIdx(null);
-           }
-           return payload;
+          if (prev?.gameState !== GameState.QUESTION && state?.gameState === GameState.QUESTION) {
+            setHasAnswered(false);
+            setLastResult(null);
+            setTextAnswer('');
+            setMySelectedAnswerIdx(null);
+          }
+          return state;
         });
-      }
-    };
-    setChannel(bc);
-    return () => bc.close();
-  }, []);
+      });
+      
+      return () => {
+        unsubscribe();
+      };
+    }
+  }, [joined, pin]);
 
   useEffect(() => {
      if (hostState?.gameState === GameState.REVEAL && hostState.resultInfo) {
@@ -124,34 +123,55 @@ const PlayerPanel: React.FC = () => {
     }
   };
 
-  const joinGame = (e: React.FormEvent) => {
+  const joinGame = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!name || !pin || !channel) return;
+    if (!name || !pin) return;
+    
+    // Check if game exists
+    const gameExists = await checkGameExists(pin);
+    if (!gameExists) {
+      alert('Game not found! Please check the PIN.');
+      return;
+    }
+    
+    // Join the game
     const avatarData = customPhoto || AVATARS[selectedAvatar].emoji;
-    channel.postMessage({
-        type: 'PLAYER_JOIN',
-        payload: { name, pin, id: playerId, avatar: avatarData }
+    await firebaseJoinGame(pin, {
+      id: playerId,
+      name,
+      score: 0,
+      streak: 0,
+      avatar: avatarData
     });
+    
     setJoined(true);
   };
 
-  const submitAnswer = (index: number) => {
-      if (!channel || !hostState || hasAnswered) return;
-      channel.postMessage({
-          type: 'PLAYER_ANSWER',
-          payload: { playerId, answerIndex: index, timeRemaining: 0 }
+  const submitAnswer = async (index: number) => {
+      if (!pin || !hostState || hasAnswered) return;
+      
+      const timeLeft = hostState.timeLeft || 0;
+      
+      await firebaseSubmitAnswer(pin, playerId, {
+        answerIndex: index,
+        timeRemaining: timeLeft
       });
+      
       setMySelectedAnswerIdx(index);
       setHasAnswered(true);
   };
 
-  const submitTextAnswer = (e: React.FormEvent) => {
+  const submitTextAnswer = async (e: React.FormEvent) => {
       e.preventDefault();
-      if (!channel || !hostState || hasAnswered || !textAnswer.trim()) return;
-      channel.postMessage({
-          type: 'PLAYER_ANSWER',
-          payload: { playerId, answerText: textAnswer.trim(), timeRemaining: 0 }
+      if (!pin || !hostState || hasAnswered || !textAnswer.trim()) return;
+      
+      const timeLeft = hostState.timeLeft || 0;
+      
+      await firebaseSubmitAnswer(pin, playerId, {
+        answerText: textAnswer.trim(),
+        timeRemaining: timeLeft
       });
+      
       setHasAnswered(true);
   };
 
@@ -270,9 +290,11 @@ const PlayerPanel: React.FC = () => {
     );
   }
 
-  if (hostState?.gameState === GameState.LOBBY) {
+  // Show lobby screen if in LOBBY state OR if just joined and waiting for host state
+  if (hostState?.gameState === GameState.LOBBY || (joined && !hostState)) {
+      console.log('Showing lobby screen. hostState:', hostState);
       return (
-          <div className="min-h-screen flex flex-col items-center justify-center p-8 pb-32 text-white text-center animate-in fade-in">
+          <div className="min-h-screen flex flex-col items-center justify-center p-8 pb-20 text-white text-center animate-in fade-in">
               <div className="bg-white/20 backdrop-blur-md p-8 rounded-3xl mb-8 shadow-xl">
                   <h1 className="text-4xl font-black mb-2">You're in!</h1>
                   <p className="text-xl font-bold opacity-80">See your name on screen?</p>
@@ -285,12 +307,13 @@ const PlayerPanel: React.FC = () => {
 
   if (hostState?.gameState === GameState.LEADERBOARD || hostState?.gameState === GameState.MENU) {
      return (
-        <div className="min-h-screen flex flex-col items-center justify-center p-8 text-white text-center">
+        <div className="min-h-screen flex flex-col items-center justify-center p-8 pb-20 text-white text-center">
              <div className="bg-[#46178f] p-6 rounded-full shadow-lg mb-6 animate-bounce">
                 <Trophy className="w-12 h-12 text-yellow-300" />
              </div>
              <h1 className="text-3xl font-black mb-2">Scoreboard</h1>
              <p className="opacity-80 font-medium">Check the host screen...</p>
+             <Footer />
         </div>
      );
   }
@@ -311,7 +334,7 @@ const PlayerPanel: React.FC = () => {
       else { msg = `You placed ${myRank}th`; Icon = Frown; }
 
       return (
-          <div className={`min-h-screen ${rankColor} flex flex-col items-center justify-center p-8 text-white text-center animate-in zoom-in duration-500 z-50 fixed inset-0`}>
+          <div className={`min-h-screen ${rankColor} flex flex-col items-center justify-center p-8 pb-20 text-white text-center animate-in zoom-in duration-500 z-50 fixed inset-0`}>
               <div className="bg-black/20 p-8 rounded-full mb-6 shadow-xl">
                  <Icon className="w-24 h-24" />
               </div>
@@ -320,6 +343,7 @@ const PlayerPanel: React.FC = () => {
                   <p className="text-xl font-bold opacity-80 mb-1 uppercase tracking-wider">Final Score</p>
                   <p className="text-5xl font-black">{myScore}</p>
               </div>
+              <Footer />
           </div>
       );
   }
@@ -327,7 +351,7 @@ const PlayerPanel: React.FC = () => {
   if (hostState?.gameState === GameState.REVEAL) {
       const isCorrect = lastResult === 'correct';
       return (
-          <div className={`min-h-screen flex flex-col items-center justify-center p-8 text-white text-center fixed inset-0 z-50 ${isCorrect ? 'bg-green-600' : 'bg-red-600'} animate-in fade-in`}>
+          <div className={`min-h-screen flex flex-col items-center justify-center p-8 pb-20 text-white text-center fixed inset-0 z-50 ${isCorrect ? 'bg-green-600' : 'bg-red-600'} animate-in fade-in`}>
               <div className="bg-white/20 p-10 rounded-full mb-8 shadow-2xl animate-in zoom-in delay-200 duration-500">
                  {isCorrect ? <Check className="w-20 h-20" /> : <X className="w-20 h-20" />}
               </div>
@@ -335,18 +359,30 @@ const PlayerPanel: React.FC = () => {
               <div className="bg-black/20 px-8 py-3 rounded-full font-bold text-xl inline-block">
                 {isCorrect ? "+ Points" : "Stay focused!"}
               </div>
+              <Footer />
           </div>
       );
   }
 
   if (hostState?.gameState === GameState.QUESTION) {
+      const timeLeft = hostState.timeLeft || 0;
+      const isLowTime = timeLeft <= 5;
+
       if (hasAnswered) {
         return (
-            <div className="min-h-screen bg-[#46178f] flex flex-col items-center justify-center p-8 text-white text-center">
+            <div className="min-h-screen bg-[#46178f] flex flex-col items-center justify-center p-8 pb-20 text-white text-center">
+                {/* Timer */}
+                <div className="mb-8">
+                  <div className={`w-24 h-24 rounded-full border-4 ${isLowTime ? 'border-red-500 bg-red-500 animate-pulse' : 'border-white bg-white/20'} flex items-center justify-center shadow-xl transition-all mx-auto`}>
+                    <span className="text-4xl font-black text-white">{timeLeft}</span>
+                  </div>
+                </div>
+
                 <div className="bg-white/10 backdrop-blur-md p-12 rounded-3xl border border-white/20 shadow-2xl animate-in zoom-in">
                     <h1 className="text-4xl font-black mb-4">Answer Sent!</h1>
                     <div className="animate-pulse opacity-70 font-bold">Waiting for results...</div>
                 </div>
+                <Footer />
             </div>
         );
       }
@@ -356,7 +392,14 @@ const PlayerPanel: React.FC = () => {
 
       if (isText) {
           return (
-            <div className="min-h-screen bg-white p-6 flex flex-col items-center justify-center fixed inset-0 z-50">
+            <div className="min-h-screen bg-white p-6 pb-20 flex flex-col items-center justify-center fixed inset-0 z-50">
+                {/* Timer */}
+                <div className="absolute top-4 left-1/2 transform -translate-x-1/2">
+                  <div className={`w-20 h-20 rounded-full border-4 ${isLowTime ? 'border-red-500 bg-red-500 animate-pulse' : 'border-[#46178f] bg-[#46178f]'} flex items-center justify-center shadow-xl transition-all`}>
+                    <span className="text-3xl font-black text-white">{timeLeft}</span>
+                  </div>
+                </div>
+
                 <div className="w-full max-w-md">
                      <h2 className="text-[#46178f] font-black text-2xl mb-8 text-center uppercase tracking-wide">
                         {currentQ?.type === 'FILL_IN_THE_BLANK' ? "Fill in the blank" : "Type your answer"}
@@ -376,14 +419,22 @@ const PlayerPanel: React.FC = () => {
                         </button>
                      </form>
                 </div>
+                <Footer />
             </div>
           );
       }
 
       const isTF = currentQ?.type === 'TRUE_FALSE';
       return (
-          <div className="min-h-screen bg-gray-100 p-4 flex flex-col relative z-50">
-              <div className="flex-1 grid grid-cols-2 gap-4 max-h-screen relative z-50">
+          <div className="min-h-screen bg-gray-100 p-4 pb-20 flex flex-col relative z-50">
+              {/* Timer */}
+              <div className="flex justify-center mb-4">
+                <div className={`w-20 h-20 rounded-full border-4 ${isLowTime ? 'border-red-500 bg-red-500 animate-pulse' : 'border-[#46178f] bg-[#46178f]'} flex items-center justify-center shadow-xl transition-all`}>
+                  <span className="text-3xl font-black text-white">{timeLeft}</span>
+                </div>
+              </div>
+
+              <div className="flex-1 grid grid-cols-2 gap-4 relative z-50">
                   {SHAPES.slice(0, isTF ? 2 : 4).map((shape, idx) => {
                       const Icon = shape.icon;
                       return (
@@ -407,13 +458,19 @@ const PlayerPanel: React.FC = () => {
                       );
                   })}
               </div>
+              <Footer />
           </div>
       );
   }
 
+  // Fallback - should not reach here
+  console.log('Fallback render. hostState:', hostState, 'joined:', joined);
   return (
-    <div className="min-h-screen bg-[#46178f] flex items-center justify-center text-white">
-        <Loader2 className="w-10 h-10 animate-spin" />
+    <div className="min-h-screen bg-[#46178f] flex flex-col items-center justify-center text-white p-8 pb-20">
+        <Loader2 className="w-10 h-10 animate-spin mb-4" />
+        <p className="text-sm opacity-70">State: {hostState?.gameState || 'null'}</p>
+        <p className="text-xs opacity-50 mt-2">Joined: {joined ? 'Yes' : 'No'}</p>
+        <Footer />
     </div>
   );
 };

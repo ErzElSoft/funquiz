@@ -9,6 +9,8 @@ import Lobby from './Lobby';
 import Footer from './Footer';
 import { createGame, updateHostState, listenToPlayers, listenToAnswers, clearAnswers } from '../services/gameService';
 
+const CHANNEL_NAME = 'genhoot_channel';
+
 const HostPanel: React.FC = () => {
   const [gameState, setGameState] = useState<GameState>(GameState.MENU);
   const [menuView, setMenuView] = useState<'SELECTION' | 'MANUAL_SETUP'>('SELECTION');
@@ -20,48 +22,78 @@ const HostPanel: React.FC = () => {
   
   const [currentAnswers, setCurrentAnswers] = useState<Record<string, { index?: number; text?: string }>>({});
   
-  const [channel, setChannel] = useState<BroadcastChannel | null>(null);
   const [timeLeft, setTimeLeft] = useState(0);
 
-  // --- Initialization ---
+  // --- Firebase Listeners ---
   useEffect(() => {
-    const bc = new BroadcastChannel(CHANNEL_NAME);
-    bc.onmessage = (event) => {
-      const msg = event.data as ChannelMessage;
-      handleMessage(msg);
-    };
-    setChannel(bc);
-    return () => bc.close();
-  }, []);
+    if (pin && gameState === GameState.LOBBY) {
+      const unsubscribePlayers = listenToPlayers(pin, (playersList) => {
+        setPlayers(playersList);
+      });
+      
+      return () => {
+        unsubscribePlayers();
+      };
+    }
+  }, [pin, gameState]);
+
+  useEffect(() => {
+    if (pin && gameState === GameState.QUESTION) {
+      const unsubscribe = listenToAnswers(pin, (answers) => {
+        const formattedAnswers: Record<string, { index?: number; text?: string; timeRemaining?: number }> = {};
+        Object.entries(answers).forEach(([playerId, answer]: [string, any]) => {
+          formattedAnswers[playerId] = {
+            index: answer.answerIndex,
+            text: answer.answerText,
+            timeRemaining: answer.timeRemaining
+          };
+        });
+        setCurrentAnswers(formattedAnswers);
+      });
+      
+      return () => {
+        unsubscribe();
+      };
+    }
+  }, [pin, gameState]);
 
   // --- Broadcast Logic ---
-  const broadcastState = useCallback((overrideState?: Partial<HostStatePayload>) => {
-    if (!channel) return;
+  const broadcastState = useCallback(async (overrideState?: Partial<HostStatePayload>) => {
+    if (!pin) return;
     
     const currentQ = quiz?.questions[currentQuestionIndex];
     
     const resultInfo = gameState === GameState.REVEAL && currentQ 
       ? { 
           correctIndex: currentQ.correctIndex, 
-          correctText: currentQ.correctIndex === -1 ? currentQ.options[0] : undefined 
+          correctText: currentQ.correctIndex === -1 ? currentQ.options[0] : null 
         } 
-      : undefined;
+      : null;
 
-    const payload: HostStatePayload = {
+    const payload: any = {
       pin,
       gameState: overrideState?.gameState || gameState,
-      timeLeft: overrideState?.timeLeft ?? timeLeft,
-      players: players.map(p => ({ ...p, lastAnswerCorrect: undefined })),
-      currentQuestion: currentQ,
-      resultInfo,
+      players: players.map(p => {
+        const { lastAnswerCorrect, ...rest } = p;
+        return rest;
+      }),
       ...overrideState
     };
 
-    channel.postMessage({
-      type: 'HOST_STATE_UPDATE',
-      payload
-    });
-  }, [channel, gameState, pin, quiz, currentQuestionIndex, timeLeft, players]);
+    // Only add optional fields if they have values
+    if (timeLeft !== undefined && timeLeft !== null) {
+      payload.timeLeft = timeLeft;
+    }
+    if (currentQ) {
+      payload.currentQuestion = currentQ;
+    }
+    if (resultInfo) {
+      payload.resultInfo = resultInfo;
+    }
+
+    console.log('Broadcasting state:', payload);
+    await updateHostState(pin, payload);
+  }, [pin, gameState, quiz, currentQuestionIndex, timeLeft, players]);
 
   useEffect(() => {
     if (gameState !== GameState.MENU) {
@@ -69,37 +101,26 @@ const HostPanel: React.FC = () => {
     }
   }, [gameState, players, timeLeft, currentQuestionIndex, broadcastState]);
 
-  const handleMessage = (msg: ChannelMessage) => {
-    if (msg.type === 'PLAYER_JOIN') {
-      const { name, pin: joinedPin, id, avatar } = msg.payload;
-      setPin(currentPin => {
-          if (joinedPin === currentPin) {
-             setPlayers(prev => {
-                if (prev.find(p => p.id === id)) return prev;
-                return [...prev, { id, name, score: 0, streak: 0, avatar }];
-             });
-          }
-          return currentPin;
-      });
-    } else if (msg.type === 'PLAYER_ANSWER') {
-      const { playerId, answerIndex, answerText } = msg.payload;
-      setCurrentAnswers(prev => ({ 
-          ...prev, 
-          [playerId]: { index: answerIndex, text: answerText } 
-      }));
-    }
-  };
-
   // --- Game Loop Handlers ---
   const handleManualQuizCreated = (createdQuiz: Quiz) => {
       setQuiz(createdQuiz);
       startLobby();
   };
 
-  const startLobby = () => {
+  const startLobby = async () => {
     const newPin = Math.floor(100000 + Math.random() * 900000).toString();
     setPin(newPin);
+    await createGame(newPin);
     setGameState(GameState.LOBBY);
+    
+    // Immediately broadcast lobby state
+    setTimeout(() => {
+      updateHostState(newPin, {
+        pin: newPin,
+        gameState: GameState.LOBBY,
+        players: []
+      });
+    }, 100);
   };
 
   const startGame = () => {
@@ -109,12 +130,17 @@ const HostPanel: React.FC = () => {
 
   const onRoundFinished = () => {
     setGameState(GameState.REVEAL);
+    const currentQ = quiz!.questions[currentQuestionIndex];
+    const maxTime = currentQ.timeLimit;
+    
     setPlayers(currentPlayers => currentPlayers.map(p => {
-        const currentQ = quiz!.questions[currentQuestionIndex];
         const ans = currentAnswers[p.id];
         
         let isCorrect = false;
+        let timeRemaining = 0;
+        
         if (ans) {
+            // Check if answer is correct
             if (currentQ.correctIndex !== -1) {
                 isCorrect = ans.index === currentQ.correctIndex;
             } else {
@@ -122,11 +148,20 @@ const HostPanel: React.FC = () => {
                 const playerText = (ans.text || "").toLowerCase().trim();
                 isCorrect = correctText === playerText;
             }
+            
+            // Get time remaining (if available)
+            timeRemaining = ans.timeRemaining || 0;
         }
         
         let scoreAdd = 0;
         if (isCorrect) {
-            scoreAdd = 1000 + (p.streak * 100);
+            // Base points: 500
+            // Time bonus: up to 500 points based on speed
+            // Streak bonus: 100 per streak
+            const basePoints = 500;
+            const timeBonus = Math.round((timeRemaining / maxTime) * 500);
+            const streakBonus = p.streak * 100;
+            scoreAdd = basePoints + timeBonus + streakBonus;
         }
 
         return {
@@ -138,7 +173,10 @@ const HostPanel: React.FC = () => {
     }));
   };
 
-  const nextQuestion = () => {
+  const nextQuestion = async () => {
+    if (pin) {
+      await clearAnswers(pin);
+    }
     setCurrentAnswers({});
     if (gameState === GameState.REVEAL) {
       setGameState(GameState.LEADERBOARD);
@@ -222,7 +260,7 @@ const HostPanel: React.FC = () => {
   const answerCount = Object.keys(currentAnswers).length;
 
   return (
-    <div className="h-screen flex flex-col relative z-10">
+    <div className="h-screen flex flex-col relative z-10 pb-16">
        <header className="px-6 py-4 flex justify-between items-center bg-black/10 backdrop-blur-sm border-b border-white/5">
          <span className="font-bold text-lg opacity-80">{quiz?.title}</span>
          <div className="flex items-center gap-2">
@@ -239,6 +277,7 @@ const HostPanel: React.FC = () => {
                 totalQuestions={quiz.questions.length}
                 answersCount={answerCount}
                 onTimerEnd={onRoundFinished}
+                onTimerTick={(time) => setTimeLeft(time)}
              />
           )}
 

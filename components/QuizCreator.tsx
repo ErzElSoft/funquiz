@@ -217,7 +217,7 @@ const QuizCreator: React.FC<Props> = ({ onSave, onCancel }) => {
                   value={qText}
                   onChange={e => setQText(e.target.value)}
                   placeholder={qType === 'FILL_IN_THE_BLANK' ? "The capital of France is ___" : "Start typing your question..."}
-                  className="w-full bg-transparent text-2xl md:text-4xl font-black text-center text-white placeholder-white/20 outline-none resize-none h-32"
+                  className="w-full bg-transparent text-2xl md:text-4xl font-semibold text-center text-white placeholder-white/50 outline-none resize-none h-32"
                 />
               </div>
 
@@ -275,7 +275,7 @@ const QuizCreator: React.FC<Props> = ({ onSave, onCancel }) => {
                     <h3 className="text-xl font-bold flex items-center justify-center gap-2">
                         {isTextType ? "Set Correct Answer" : "Set Options"}
                     </h3>
-                    <p className="text-white/50 text-sm">{isTextType ? "Players must type this exactly" : "Click the circle to mark correct answer"}</p>
+                    <p className="text-white/80 text-sm font-semibold">{isTextType ? "Players must type this exactly" : "Click the circle to mark correct answer"}</p>
                   </div>
 
                   {isTextType ? (
@@ -284,7 +284,7 @@ const QuizCreator: React.FC<Props> = ({ onSave, onCancel }) => {
                             value={qAnswerText}
                             onChange={e => setQAnswerText(e.target.value)}
                             placeholder="Type the correct answer here..."
-                            className="w-full bg-black/20 border-2 border-white/10 rounded-xl p-6 text-center text-3xl font-black text-white placeholder-white/20 focus:border-green-400 focus:bg-black/40 outline-none transition-all"
+                            className="w-full bg-black/20 border-2 border-white/10 rounded-xl p-6 text-center text-3xl font-semibold text-white placeholder-white/50 focus:border-green-400 focus:bg-black/40 outline-none transition-all"
                           />
                           <div className="mt-4 flex justify-center">
                               <span className="bg-green-500/20 text-green-300 px-4 py-1 rounded-full text-xs font-bold uppercase tracking-wider border border-green-500/30">
@@ -315,7 +315,7 @@ const QuizCreator: React.FC<Props> = ({ onSave, onCancel }) => {
                                                 onChange={e => handleOptionChange(idx, e.target.value)}
                                                 readOnly={qType === 'TRUE_FALSE'}
                                                 placeholder={`Option ${idx + 1}`}
-                                                className={`w-full h-full p-4 text-gray-900 font-bold text-lg outline-none ${qType === 'TRUE_FALSE' ? 'cursor-default' : ''}`}
+                                                className={`w-full h-full p-4 text-gray-900 font-semibold text-lg outline-none placeholder-gray-400 ${qType === 'TRUE_FALSE' ? 'cursor-default' : ''}`}
                                             />
                                             <button
                                                 onClick={() => setQCorrectIdx(idx)}
