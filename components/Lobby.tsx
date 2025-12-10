@@ -1,18 +1,71 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { Player } from '../types';
-import { Users, Play, Music } from 'lucide-react';
+import { Users, Play, Music, ArrowLeft, X } from 'lucide-react';
 
 interface Props {
   pin: string;
   players: Player[];
   onStart: () => void;
   onAddFakePlayer: () => void;
+  onBack?: () => void;
+  onExit?: () => void;
 }
 
-const Lobby: React.FC<Props> = ({ pin, players, onStart }) => {
+const Lobby: React.FC<Props> = ({ pin, players, onStart, onBack, onExit }) => {
+  const [showExitConfirm, setShowExitConfirm] = useState(false);
+
+  const handleExit = () => {
+    if (onExit) {
+      onExit();
+    }
+  };
+
   return (
     <div className="flex flex-col h-screen w-full p-8 relative z-10">
       
+      {/* Top Navigation Bar */}
+      <div className="flex justify-between items-center mb-6">
+        {onBack && (
+          <button
+            onClick={onBack}
+            className="flex items-center gap-2 px-6 py-3 bg-white/10 hover:bg-white/20 rounded-xl transition-all duration-200 border border-white/20 text-white font-bold"
+          >
+            <ArrowLeft className="w-5 h-5" />
+            <span>Back to Dashboard</span>
+          </button>
+        )}
+        
+        <div className="flex-1"></div>
+        
+        {onExit && (
+          showExitConfirm ? (
+            <div className="flex items-center gap-3 bg-red-500/20 backdrop-blur-md px-4 py-3 rounded-xl border border-red-500/30">
+              <span className="text-white font-semibold">Exit quiz?</span>
+              <button
+                onClick={handleExit}
+                className="px-4 py-2 bg-red-600 hover:bg-red-700 rounded-lg text-white font-bold transition-all"
+              >
+                Yes, Exit
+              </button>
+              <button
+                onClick={() => setShowExitConfirm(false)}
+                className="px-4 py-2 bg-white/10 hover:bg-white/20 rounded-lg text-white font-bold transition-all"
+              >
+                Cancel
+              </button>
+            </div>
+          ) : (
+            <button
+              onClick={() => setShowExitConfirm(true)}
+              className="flex items-center gap-2 px-6 py-3 bg-red-600/80 hover:bg-red-600 rounded-xl transition-all duration-200 border border-red-500/30 text-white font-bold"
+            >
+              <X className="w-5 h-5" />
+              <span>Exit Quiz</span>
+            </button>
+          )
+        )}
+      </div>
+
       {/* Header Info */}
       <div className="flex justify-center items-center mb-12 relative">
         <div className="bg-white/10 backdrop-blur-md border border-white/20 p-8 rounded-3xl text-center shadow-2xl animate-in slide-in-from-top">

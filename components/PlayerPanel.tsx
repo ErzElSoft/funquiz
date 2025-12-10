@@ -26,6 +26,17 @@ const AVATARS = [
   { emoji: '🐰', color: 'bg-gradient-to-br from-pink-300 to-pink-500', name: 'Bunny' },
 ];
 
+const STORAGE_KEY = 'quiz_player_session';
+
+interface PlayerSession {
+  playerId: string;
+  playerName: string;
+  gamePin: string;
+  selectedAvatar: number;
+  customPhoto: string | null;
+  hasJoined: boolean;
+}
+
 const PlayerPanel: React.FC = () => {
   const [joined, setJoined] = useState(false);
   const [name, setName] = useState("");
@@ -33,11 +44,21 @@ const PlayerPanel: React.FC = () => {
   const [selectedAvatar, setSelectedAvatar] = useState(0);
   const [customPhoto, setCustomPhoto] = useState<string | null>(null);
   const [showCamera, setShowCamera] = useState(false);
-  const [playerId] = useState(() => `player-${Math.random().toString(36).substr(2, 9)}`);
+  const [playerId, setPlayerId] = useState(() => {
+    // Try to get existing playerId from localStorage, or create new one
+    const saved = localStorage.getItem(STORAGE_KEY);
+    if (saved) {
+      const session: PlayerSession = JSON.parse(saved);
+      return session.playerId;
+    }
+    return `player-${Math.random().toString(36).substr(2, 9)}`;
+  });
+  const [restoringSession, setRestoringSession] = useState(true);
   
   const [hostState, setHostState] = useState<HostStatePayload | null>(null);
   const [hasAnswered, setHasAnswered] = useState(false);
   const [lastResult, setLastResult] = useState<'correct' | 'wrong' | null>(null);
+  const [hostExited, setHostExited] = useState(false);
 
   const [textAnswer, setTextAnswer] = useState('');
   const [mySelectedAnswerIdx, setMySelectedAnswerIdx] = useState<number | null>(null);
@@ -45,11 +66,94 @@ const PlayerPanel: React.FC = () => {
   const videoRef = React.useRef<HTMLVideoElement>(null);
   const canvasRef = React.useRef<HTMLCanvasElement>(null);
 
+  // Restore session on mount
+  useEffect(() => {
+    const restoreSession = async () => {
+      try {
+        const savedSession = localStorage.getItem(STORAGE_KEY);
+        if (savedSession) {
+          const session: PlayerSession = JSON.parse(savedSession);
+          
+          // Check if the game still exists
+          const gameExists = await checkGameExists(session.gamePin);
+          
+          if (gameExists) {
+            // Restore session
+            setPlayerId(session.playerId);
+            setName(session.playerName);
+            setPin(session.gamePin);
+            setSelectedAvatar(session.selectedAvatar);
+            setCustomPhoto(session.customPhoto);
+            setJoined(true);
+            
+            console.log('Session restored successfully with playerId:', session.playerId);
+          } else {
+            // Game no longer exists, clear session
+            localStorage.removeItem(STORAGE_KEY);
+            console.log('Game no longer exists, session cleared');
+          }
+        }
+      } catch (error) {
+        console.error('Error restoring session:', error);
+        localStorage.removeItem(STORAGE_KEY);
+      } finally {
+        setRestoringSession(false);
+      }
+    };
+
+    // Add timeout to prevent infinite loading
+    const timeout = setTimeout(() => {
+      console.log('Player session restoration timeout');
+      setRestoringSession(false);
+    }, 3000);
+
+    restoreSession().then(() => clearTimeout(timeout));
+
+    return () => clearTimeout(timeout);
+  }, []);
+
+  // Save session when player joins
+  useEffect(() => {
+    if (joined && pin && name) {
+      const session: PlayerSession = {
+        playerId,
+        playerName: name,
+        gamePin: pin,
+        selectedAvatar,
+        customPhoto,
+        hasJoined: true
+      };
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(session));
+    }
+  }, [joined, pin, name, playerId, selectedAvatar, customPhoto]);
+
+  // Clear session when game ends
+  useEffect(() => {
+    if (hostState?.gameState === GameState.FINISH) {
+      // Clear session after a delay to allow player to see final results
+      const timer = setTimeout(() => {
+        localStorage.removeItem(STORAGE_KEY);
+        console.log('Session cleared after game end');
+      }, 5000);
+      
+      return () => clearTimeout(timer);
+    }
+  }, [hostState?.gameState]);
+
   useEffect(() => {
     if (joined && pin) {
       console.log('Player listening to hostState for PIN:', pin);
       const unsubscribe = listenToHostState(pin, (state) => {
         console.log('Received hostState:', state);
+        
+        // Check if host has exited (state is null or game doesn't exist)
+        if (state === null) {
+          // Host has exited, show message screen
+          setHostExited(true);
+          localStorage.removeItem(STORAGE_KEY);
+          return;
+        }
+        
         setHostState(prev => {
           if (prev?.gameState !== GameState.QUESTION && state?.gameState === GameState.QUESTION) {
             setHasAnswered(false);
@@ -175,6 +279,48 @@ const PlayerPanel: React.FC = () => {
       setHasAnswered(true);
   };
 
+  // Show host exited screen
+  if (hostExited) {
+    return (
+      <div className="min-h-screen flex flex-col items-center justify-center p-4 pb-32 relative z-10 bg-gradient-to-br from-red-600 to-orange-600">
+        <div className="bg-white rounded-3xl p-10 w-full max-w-md shadow-2xl text-center">
+          <div className="bg-red-100 w-20 h-20 rounded-full flex items-center justify-center mx-auto mb-6">
+            <X className="w-10 h-10 text-red-600" />
+          </div>
+          <h1 className="text-3xl font-bold text-gray-900 mb-4">Quiz Ended</h1>
+          <p className="text-gray-600 mb-8 text-lg">
+            The host has exited the quiz. Thank you for playing!
+          </p>
+          <button
+            onClick={() => {
+              setHostExited(false);
+              setJoined(false);
+              setPin('');
+              setName('');
+              setHostState(null);
+            }}
+            className="w-full bg-gradient-to-r from-purple-600 to-blue-600 text-white font-bold py-4 rounded-xl hover:from-purple-500 hover:to-blue-500 transition-all transform active:scale-95 shadow-lg"
+          >
+            Join Another Game
+          </button>
+        </div>
+        <Footer />
+      </div>
+    );
+  }
+
+  if (restoringSession) {
+    return (
+      <div className="min-h-screen flex flex-col items-center justify-center p-4 pb-32 relative z-10" style={{ background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)' }}>
+        <div className="text-white text-center">
+          <Loader2 className="w-12 h-12 animate-spin mx-auto mb-4" />
+          <p className="text-xl font-bold">Restoring session...</p>
+        </div>
+        <Footer />
+      </div>
+    );
+  }
+
   if (!joined) {
     return (
       <div className="min-h-screen flex flex-col items-center justify-center p-4 pb-32 relative z-10">
@@ -290,16 +436,57 @@ const PlayerPanel: React.FC = () => {
     );
   }
 
+  // Check if game still exists after waiting for hostState
+  useEffect(() => {
+    if (joined && !hostState && pin) {
+      // Wait a bit for hostState to load
+      const timer = setTimeout(async () => {
+        // Still no hostState after waiting, check if game exists
+        const gameExists = await checkGameExists(pin);
+        if (!gameExists) {
+          // Game doesn't exist, clear session and return to join screen
+          console.log('Game no longer exists, returning to join screen');
+          localStorage.removeItem(STORAGE_KEY);
+          setJoined(false);
+          setPin('');
+          setName('');
+          setHostState(null);
+        }
+      }, 2000); // Wait 2 seconds for hostState to load
+      
+      return () => clearTimeout(timer);
+    }
+  }, [joined, hostState, pin]);
+
   // Show lobby screen if in LOBBY state OR if just joined and waiting for host state
   if (hostState?.gameState === GameState.LOBBY || (joined && !hostState)) {
       console.log('Showing lobby screen. hostState:', hostState);
       return (
-          <div className="min-h-screen flex flex-col items-center justify-center p-8 pb-20 text-white text-center animate-in fade-in">
-              <div className="bg-white/20 backdrop-blur-md p-8 rounded-3xl mb-8 shadow-xl">
-                  <h1 className="text-4xl font-black mb-2">You're in!</h1>
-                  <p className="text-xl font-bold opacity-80">See your name on screen?</p>
+          <div style={{
+            minHeight: '100vh',
+            display: 'flex',
+            flexDirection: 'column',
+            alignItems: 'center',
+            justifyContent: 'center',
+            padding: '32px 32px 80px',
+            background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+            color: 'white',
+            textAlign: 'center'
+          }}>
+              <div style={{
+                background: 'rgba(255, 255, 255, 0.2)',
+                backdropFilter: 'blur(10px)',
+                padding: '32px',
+                borderRadius: '24px',
+                marginBottom: '32px',
+                boxShadow: '0 20px 60px rgba(0,0,0,0.3)'
+              }}>
+                  <h1 style={{ fontSize: '36px', fontWeight: '900', marginBottom: '8px' }}>You're in!</h1>
+                  <p style={{ fontSize: '20px', fontWeight: '700', opacity: 0.8 }}>See your name on screen?</p>
               </div>
-              <div className="animate-spin text-white/50"><Loader2 className="w-12 h-12" /></div>
+              <div style={{ animation: 'spin 1s linear infinite', color: 'rgba(255,255,255,0.5)' }}>
+                <Loader2 style={{ width: '48px', height: '48px' }} />
+              </div>
               <Footer />
           </div>
       );

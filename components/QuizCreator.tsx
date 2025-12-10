@@ -1,7 +1,9 @@
 
 import React, { useState } from 'react';
 import { Quiz, Question, QuestionType } from '../types';
-import { Plus, Trash2, Save, CheckCircle, Circle, Clock, Type, FileText, ArrowLeft, LayoutGrid, ToggleLeft } from 'lucide-react';
+import { Plus, Trash2, Save, CheckCircle, Circle, Clock, Type, FileText, ArrowLeft, LayoutGrid, ToggleLeft, Database } from 'lucide-react';
+import { useAuth } from '../contexts/AuthContext';
+import { saveQuiz } from '../services/quizService';
 
 interface Props {
   onSave: (quiz: Quiz) => void;
@@ -12,8 +14,11 @@ const DEFAULT_MC_OPTIONS = ['', '', '', ''];
 const DEFAULT_TF_OPTIONS = ['True', 'False'];
 
 const QuizCreator: React.FC<Props> = ({ onSave, onCancel }) => {
+  const { user } = useAuth();
   const [title, setTitle] = useState('');
   const [questions, setQuestions] = useState<Question[]>([]);
+  const [saving, setSaving] = useState(false);
+  const [saveMessage, setSaveMessage] = useState<{ type: 'success' | 'error', text: string } | null>(null);
   
   // Current Question State
   const [qText, setQText] = useState('');
@@ -123,6 +128,54 @@ const QuizCreator: React.FC<Props> = ({ onSave, onCancel }) => {
     });
   };
 
+  const handleSaveToLibrary = async () => {
+    if (!user) {
+      setSaveMessage({ type: 'error', text: 'You must be logged in to save quizzes' });
+      return;
+    }
+
+    if (!title.trim()) {
+      setSaveMessage({ type: 'error', text: 'Please add a Quiz Title' });
+      return;
+    }
+
+    let finalQuestions = [...questions];
+
+    // If user has a pending valid question, add it automatically
+    if (isFormValid) {
+      finalQuestions.push(createQuestionObject());
+      resetCurrentQuestion();
+    }
+
+    if (finalQuestions.length === 0) {
+      setSaveMessage({ type: 'error', text: 'Please add at least one question' });
+      return;
+    }
+
+    setSaving(true);
+    setSaveMessage(null);
+
+    try {
+      await saveQuiz(user.uid, {
+        title,
+        topic: 'Custom',
+        questions: finalQuestions
+      });
+      
+      setSaveMessage({ type: 'success', text: 'Quiz saved successfully!' });
+      setQuestions(finalQuestions);
+      
+      setTimeout(() => {
+        setSaveMessage(null);
+      }, 3000);
+    } catch (error) {
+      console.error('Error saving quiz:', error);
+      setSaveMessage({ type: 'error', text: 'Failed to save quiz. Please try again.' });
+    } finally {
+      setSaving(false);
+    }
+  };
+
   const canSave = title.trim().length > 0 && (questions.length > 0 || isFormValid);
 
   return (
@@ -138,13 +191,29 @@ const QuizCreator: React.FC<Props> = ({ onSave, onCancel }) => {
                 <LayoutGrid className="w-5 h-5 text-purple-300" /> Quiz Creator
             </h2>
         </div>
-        <button 
-             onClick={handleSaveQuiz} 
-             disabled={!canSave}
-             className="bg-white text-[#46178f] px-6 py-2 rounded-full font-bold hover:scale-105 transition-transform disabled:opacity-50 disabled:scale-100 flex items-center gap-2 shadow-lg"
-           >
-             <Save className="w-4 h-4" /> Save & Host
-        </button>
+        <div className="flex items-center gap-3">
+          {saveMessage && (
+            <div className={`px-4 py-2 rounded-lg text-sm font-semibold ${
+              saveMessage.type === 'success' ? 'bg-green-500/20 text-green-300 border border-green-500/30' : 'bg-red-500/20 text-red-300 border border-red-500/30'
+            }`}>
+              {saveMessage.text}
+            </div>
+          )}
+          <button 
+            onClick={handleSaveToLibrary} 
+            disabled={!canSave || saving}
+            className="bg-purple-600 hover:bg-purple-700 text-white px-6 py-2 rounded-full font-bold hover:scale-105 transition-transform disabled:opacity-50 disabled:scale-100 flex items-center gap-2 shadow-lg"
+          >
+            <Database className="w-4 h-4" /> {saving ? 'Saving...' : 'Save to Library'}
+          </button>
+          <button 
+            onClick={handleSaveQuiz} 
+            disabled={!canSave}
+            className="bg-white text-[#46178f] px-6 py-2 rounded-full font-bold hover:scale-105 transition-transform disabled:opacity-50 disabled:scale-100 flex items-center gap-2 shadow-lg"
+          >
+            <Save className="w-4 h-4" /> Save & Host
+          </button>
+        </div>
       </div>
 
       <div className="flex flex-1 overflow-hidden">
