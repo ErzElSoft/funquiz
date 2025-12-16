@@ -65,3 +65,9 @@ export const checkGameExists = async (pin: string): Promise<boolean> => {
   const snapshot = await get(gameRef);
   return snapshot.exists();
 };
+
+export const checkPlayerAnswered = async (pin: string, playerId: string): Promise<boolean> => {
+  const answerRef = ref(database, `games/${pin}/answers/${playerId}`);
+  const snapshot = await get(answerRef);
+  return snapshot.exists();
+};

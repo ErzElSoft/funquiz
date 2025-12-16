@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { HostStatePayload, GameState } from '../types';
 import { Triangle, Hexagon, Circle, Square, Check, X, Loader2, Send, Trophy, Medal, Frown, User, Cat, Dog, Smile, Heart, Star, Zap, Flame } from 'lucide-react';
 import Footer from './Footer';
-import { joinGame as firebaseJoinGame, listenToHostState, submitAnswer as firebaseSubmitAnswer, checkGameExists } from '../services/gameService';
+import { joinGame as firebaseJoinGame, listenToHostState, submitAnswer as firebaseSubmitAnswer, checkGameExists, checkPlayerAnswered } from '../services/gameService';
 
 const SHAPES = [
   { color: 'bg-red-500', icon: Triangle, shadow: 'shadow-red-900' },
@@ -69,6 +69,7 @@ const PlayerPanel: React.FC = () => {
   
   const videoRef = React.useRef<HTMLVideoElement>(null);
   const canvasRef = React.useRef<HTMLCanvasElement>(null);
+  const previousScoreRef = React.useRef<number>(0);
 
   // Restore session on mount
   useEffect(() => {
@@ -164,6 +165,11 @@ const PlayerPanel: React.FC = () => {
             setLastResult(null);
             setTextAnswer('');
             setMySelectedAnswerIdx(null);
+            // Store current score before question starts
+            const myPlayer = state?.players?.find(p => p.id === playerId);
+            if (myPlayer) {
+              previousScoreRef.current = myPlayer.score;
+            }
           }
           return state;
         });
@@ -222,6 +228,33 @@ const PlayerPanel: React.FC = () => {
       return () => clearTimeout(timer);
     }
   }, [joined, hostState, pin]);
+
+  // Update previous score when in REVEAL state
+  useEffect(() => {
+    if (hostState?.gameState === GameState.REVEAL) {
+      const myPlayer = hostState.players?.find(p => p.id === playerId);
+      if (myPlayer) {
+        // Store the score after reveal for next question
+        const timer = setTimeout(() => {
+          previousScoreRef.current = myPlayer.score;
+        }, 100);
+        return () => clearTimeout(timer);
+      }
+    }
+  }, [hostState?.gameState, hostState?.players, playerId]);
+
+  // Check if player has already answered when question state loads
+  useEffect(() => {
+    const checkAnswer = async () => {
+      if (hostState?.gameState === GameState.QUESTION && pin && playerId) {
+        const hasAlreadyAnswered = await checkPlayerAnswered(pin, playerId);
+        if (hasAlreadyAnswered) {
+          setHasAnswered(true);
+        }
+      }
+    };
+    checkAnswer();
+  }, [hostState?.gameState, pin, playerId]);
 
   const startCamera = async () => {
     try {
@@ -533,15 +566,34 @@ const PlayerPanel: React.FC = () => {
 
   if (hostState?.gameState === GameState.REVEAL) {
       const isCorrect = lastResult === 'correct';
+      const myPlayer = hostState.players?.find(p => p.id === playerId);
+      const totalScore = myPlayer?.score || 0;
+      
+      // Calculate actual earned points by comparing with previous score
+      const earnedPoints = totalScore - previousScoreRef.current;
+      
       return (
           <div className={`min-h-screen flex flex-col items-center justify-center p-8 pb-20 text-white text-center fixed inset-0 z-50 ${isCorrect ? 'bg-green-600' : 'bg-red-600'} animate-in fade-in`}>
               <div className="bg-white/20 p-10 rounded-full mb-8 shadow-2xl animate-in zoom-in delay-200 duration-500">
                  {isCorrect ? <Check className="w-20 h-20" /> : <X className="w-20 h-20" />}
               </div>
               <h1 className="text-5xl font-black mb-4 drop-shadow-md">{isCorrect ? "Correct!" : "Incorrect"}</h1>
-              <div className="bg-black/20 px-8 py-3 rounded-full font-bold text-xl inline-block">
-                {isCorrect ? "+ Points" : "Stay focused!"}
-              </div>
+              
+              {isCorrect ? (
+                <div className="space-y-4">
+                  <div className="bg-black/20 px-8 py-3 rounded-full font-bold text-2xl inline-block animate-in zoom-in delay-300">
+                    +{earnedPoints} Points
+                  </div>
+                  <div className="bg-white/10 backdrop-blur-sm px-6 py-2 rounded-full font-bold text-lg inline-block border border-white/20">
+                    Total: {totalScore}
+                  </div>
+                </div>
+              ) : (
+                <div className="bg-black/20 px-8 py-3 rounded-full font-bold text-xl inline-block">
+                  Stay focused!
+                </div>
+              )}
+              
               <Footer />
           </div>
       );
