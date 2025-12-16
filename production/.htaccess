@@ -2,11 +2,18 @@ Options -MultiViews
 RewriteEngine On
 RewriteBase /quiz/
 
-# Prevent caching of HTML and JS files
-<FilesMatch "\.(html|js)$">
-  Header set Cache-Control "no-cache, no-store, must-revalidate"
+# Force no caching for HTML files - AGGRESSIVE
+<FilesMatch "\.(html|htm)$">
+  Header unset ETag
+  Header set Cache-Control "no-store, no-cache, must-revalidate, max-age=0, post-check=0, pre-check=0"
   Header set Pragma "no-cache"
-  Header set Expires 0
+  Header set Expires "Thu, 01 Jan 1970 00:00:00 GMT"
+  FileETag None
+</FilesMatch>
+
+# JS files can be cached since they have timestamps
+<FilesMatch "\.(js)$">
+  Header set Cache-Control "public, max-age=31536000, immutable"
 </FilesMatch>
 
 RewriteCond %{REQUEST_FILENAME} !-f

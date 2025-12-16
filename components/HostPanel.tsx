@@ -113,13 +113,23 @@ const HostPanel: React.FC = () => {
     if (gameState === GameState.FINISH) {
       // Save game history when game finishes
       const saveHistory = async () => {
+        console.log('Attempting to save game history...', {
+          hasUser: !!user,
+          hasQuiz: !!quiz,
+          hasGameStartTime: !!gameStartTime,
+          playersCount: players.length,
+          currentQuizId
+        });
+        
         if (user && quiz && gameStartTime && players.length > 0) {
           try {
-            await saveGameHistory(user.uid, quiz, pin, players, gameStartTime, currentQuizId);
-            console.log('Game history saved successfully on finish');
+            const historyId = await saveGameHistory(user.uid, quiz, pin, players, gameStartTime, currentQuizId);
+            console.log('Game history saved successfully on finish with ID:', historyId);
           } catch (error) {
             console.error('Error saving game history on finish:', error);
           }
+        } else {
+          console.warn('Cannot save game history - missing required data');
         }
       };
       
@@ -227,6 +237,13 @@ const HostPanel: React.FC = () => {
     setCurrentQuizId(loadedQuiz.id);
     setMenuView('SELECTION');
     startLobby();
+  };
+
+  const handleEditQuiz = (quizToEdit: Quiz & { id?: string }) => {
+    // Load quiz into creator for editing
+    setQuiz(quizToEdit);
+    setCurrentQuizId(quizToEdit.id);
+    setMenuView('MANUAL_SETUP');
   };
 
   const startLobby = async () => {
@@ -378,11 +395,11 @@ const HostPanel: React.FC = () => {
 
   if (gameState === GameState.MENU) {
     if (menuView === 'MANUAL_SETUP') {
-        return <QuizCreator onSave={handleManualQuizCreated} onCancel={() => setMenuView('SELECTION')} />;
+        return <QuizCreator onSave={handleManualQuizCreated} onCancel={() => setMenuView('SELECTION')} initialQuiz={quiz || undefined} />;
     }
 
     if (menuView === 'QUIZ_LIBRARY') {
-        return <QuizLibrary onLoadQuiz={handleLoadQuiz} onBack={() => setMenuView('SELECTION')} />;
+        return <QuizLibrary onLoadQuiz={handleLoadQuiz} onEditQuiz={handleEditQuiz} onBack={() => setMenuView('SELECTION')} />;
     }
 
     return (
@@ -390,21 +407,23 @@ const HostPanel: React.FC = () => {
         
         {menuView === 'SELECTION' && (
              <div className="bg-white/10 backdrop-blur-xl p-10 rounded-3xl shadow-2xl max-w-2xl w-full border border-white/20 animate-in zoom-in duration-300">
-                <div className="flex justify-between items-center mb-8">
-                  <div className="text-sm opacity-70">
-                    Logged in as: <span className="font-semibold">{user?.email}</span>
+                <div className="flex justify-between items-start gap-4 mb-8">
+                  <div className="text-xs sm:text-sm opacity-70">
+                    <div>Logged in as:</div>
+                    <div className="font-semibold">{user?.email}</div>
                   </div>
                   <button
                     onClick={handleLogout}
-                    className="flex items-center gap-2 px-4 py-2 bg-white/10 hover:bg-white/20 rounded-lg transition-all duration-200 border border-white/20"
+                    className="flex items-center justify-center w-10 h-10 sm:w-auto sm:h-auto sm:gap-2 sm:px-4 sm:py-2 bg-white/10 hover:bg-white/20 rounded-lg transition-all duration-200 border border-white/20 shrink-0"
+                    title="Logout"
                   >
-                    <LogOut className="w-4 h-4" />
-                    <span>Logout</span>
+                    <LogOut className="w-5 h-5 sm:w-4 sm:h-4" />
+                    <span className="hidden sm:inline">Logout</span>
                   </button>
                 </div>
-                <div className="text-center mb-12">
-                     <h1 className="text-5xl font-semibold mb-4 tracking-tight">Host Dashboard</h1>
-                     <p className="text-white/70 text-xl font-medium">Ready to challenge your players?</p>
+                <div className="text-center mb-8 sm:mb-12">
+                     <h1 className="text-3xl sm:text-4xl md:text-5xl font-semibold mb-2 sm:mb-4 tracking-tight">Host Dashboard</h1>
+                     <p className="text-white/70 text-base sm:text-lg md:text-xl font-medium">Ready to challenge your players?</p>
                 </div>
                 
                 <div className="flex flex-col gap-4">
@@ -420,15 +439,15 @@ const HostPanel: React.FC = () => {
                                 // Trigger session restoration
                                 window.location.reload();
                               }}
-                              className="group w-full bg-gradient-to-br from-green-600/80 to-emerald-600/80 hover:from-green-600 hover:to-emerald-600 text-left p-8 rounded-2xl border border-white/10 hover:border-white/50 transition-all duration-300 shadow-xl hover:shadow-green-500/50 hover:-translate-y-1 animate-pulse"
+                              className="group w-full bg-gradient-to-br from-green-600/80 to-emerald-600/80 hover:from-green-600 hover:to-emerald-600 text-left p-4 sm:p-6 md:p-8 rounded-2xl border border-white/10 hover:border-white/50 transition-all duration-300 shadow-xl hover:shadow-green-500/50 hover:-translate-y-1 animate-pulse"
                             >
-                              <div className="flex items-center gap-6">
-                                <div className="bg-white w-20 h-20 rounded-2xl flex items-center justify-center shadow-inner group-hover:scale-110 transition-transform shrink-0">
-                                  <Play className="w-10 h-10 text-green-600" />
+                              <div className="flex flex-col sm:flex-row items-center sm:items-center gap-4 sm:gap-6 text-center sm:text-left">
+                                <div className="bg-white w-16 h-16 sm:w-20 sm:h-20 rounded-2xl flex items-center justify-center shadow-inner group-hover:scale-110 transition-transform shrink-0">
+                                  <Play className="w-8 h-8 sm:w-10 sm:h-10 text-green-600" />
                                 </div>
-                                <div>
-                                  <h3 className="text-3xl font-semibold mb-2">Resume Game</h3>
-                                  <p className="text-green-100 group-hover:text-white text-lg leading-tight">
+                                <div className="flex-1">
+                                  <h3 className="text-xl sm:text-2xl md:text-3xl font-semibold mb-1 sm:mb-2">Resume Game</h3>
+                                  <p className="text-green-100 group-hover:text-white text-sm sm:text-base md:text-lg leading-tight">
                                     Continue your active game: {session.quiz?.title || 'Quiz'} (PIN: {session.pin})
                                   </p>
                                 </div>
@@ -444,30 +463,30 @@ const HostPanel: React.FC = () => {
 
                     <button 
                         onClick={() => setMenuView('MANUAL_SETUP')}
-                        className="group w-full bg-gradient-to-br from-blue-600/80 to-purple-600/80 hover:from-blue-600 hover:to-purple-600 text-left p-8 rounded-2xl border border-white/10 hover:border-white/50 transition-all duration-300 shadow-xl hover:shadow-purple-500/50 hover:-translate-y-1"
+                        className="group w-full bg-gradient-to-br from-blue-600/80 to-purple-600/80 hover:from-blue-600 hover:to-purple-600 text-left p-4 sm:p-6 md:p-8 rounded-2xl border border-white/10 hover:border-white/50 transition-all duration-300 shadow-xl hover:shadow-purple-500/50 hover:-translate-y-1"
                     >
-                        <div className="flex items-center gap-6">
-                            <div className="bg-white w-20 h-20 rounded-2xl flex items-center justify-center shadow-inner group-hover:scale-110 transition-transform shrink-0">
-                                <Pencil className="w-10 h-10 text-blue-600" />
+                        <div className="flex flex-col sm:flex-row items-center sm:items-center gap-4 sm:gap-6 text-center sm:text-left">
+                            <div className="bg-white w-16 h-16 sm:w-20 sm:h-20 rounded-2xl flex items-center justify-center shadow-inner group-hover:scale-110 transition-transform shrink-0">
+                                <Pencil className="w-8 h-8 sm:w-10 sm:h-10 text-blue-600" />
                             </div>
-                            <div>
-                                <h3 className="text-3xl font-semibold mb-2">Create New Quiz</h3>
-                                <p className="text-blue-100 group-hover:text-white text-lg leading-tight">Design custom questions, set timers, and host your game.</p>
+                            <div className="flex-1">
+                                <h3 className="text-xl sm:text-2xl md:text-3xl font-semibold mb-1 sm:mb-2">Create New Quiz</h3>
+                                <p className="text-blue-100 group-hover:text-white text-sm sm:text-base md:text-lg leading-tight">Design custom questions, set timers, and host your game.</p>
                             </div>
                         </div>
                     </button>
 
                     <button 
                         onClick={() => setMenuView('QUIZ_LIBRARY')}
-                        className="group w-full bg-gradient-to-br from-green-600/80 to-teal-600/80 hover:from-green-600 hover:to-teal-600 text-left p-8 rounded-2xl border border-white/10 hover:border-white/50 transition-all duration-300 shadow-xl hover:shadow-green-500/50 hover:-translate-y-1"
+                        className="group w-full bg-gradient-to-br from-green-600/80 to-teal-600/80 hover:from-green-600 hover:to-teal-600 text-left p-4 sm:p-6 md:p-8 rounded-2xl border border-white/10 hover:border-white/50 transition-all duration-300 shadow-xl hover:shadow-green-500/50 hover:-translate-y-1"
                     >
-                        <div className="flex items-center gap-6">
-                            <div className="bg-white w-20 h-20 rounded-2xl flex items-center justify-center shadow-inner group-hover:scale-110 transition-transform shrink-0">
-                                <BookOpen className="w-10 h-10 text-green-600" />
+                        <div className="flex flex-col sm:flex-row items-center sm:items-center gap-4 sm:gap-6 text-center sm:text-left">
+                            <div className="bg-white w-16 h-16 sm:w-20 sm:h-20 rounded-2xl flex items-center justify-center shadow-inner group-hover:scale-110 transition-transform shrink-0">
+                                <BookOpen className="w-8 h-8 sm:w-10 sm:h-10 text-green-600" />
                             </div>
-                            <div>
-                                <h3 className="text-3xl font-semibold mb-2">My Quiz Library</h3>
-                                <p className="text-green-100 group-hover:text-white text-lg leading-tight">Load and host your saved quizzes.</p>
+                            <div className="flex-1">
+                                <h3 className="text-xl sm:text-2xl md:text-3xl font-semibold mb-1 sm:mb-2">My Quiz Library</h3>
+                                <p className="text-green-100 group-hover:text-white text-sm sm:text-base md:text-lg leading-tight">Load and host your saved quizzes.</p>
                             </div>
                         </div>
                     </button>

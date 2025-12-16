@@ -8,15 +8,16 @@ import { saveQuiz } from '../services/quizService';
 interface Props {
   onSave: (quiz: Quiz) => void;
   onCancel: () => void;
+  initialQuiz?: Quiz;
 }
 
 const DEFAULT_MC_OPTIONS = ['', '', '', ''];
 const DEFAULT_TF_OPTIONS = ['True', 'False'];
 
-const QuizCreator: React.FC<Props> = ({ onSave, onCancel }) => {
+const QuizCreator: React.FC<Props> = ({ onSave, onCancel, initialQuiz }) => {
   const { user } = useAuth();
-  const [title, setTitle] = useState('');
-  const [questions, setQuestions] = useState<Question[]>([]);
+  const [title, setTitle] = useState(initialQuiz?.title || '');
+  const [questions, setQuestions] = useState<Question[]>(initialQuiz?.questions || []);
   const [saving, setSaving] = useState(false);
   const [saveMessage, setSaveMessage] = useState<{ type: 'success' | 'error', text: string } | null>(null);
   
@@ -182,18 +183,19 @@ const QuizCreator: React.FC<Props> = ({ onSave, onCancel }) => {
     <div className="flex flex-col h-screen text-white relative z-10">
       
       {/* Top Bar */}
-      <div className="bg-black/20 backdrop-blur-md border-b border-white/10 p-4 flex justify-between items-center sticky top-0 z-20">
-        <div className="flex items-center gap-4">
-            <button onClick={onCancel} className="p-2 hover:bg-white/10 rounded-full transition">
-                <ArrowLeft className="w-6 h-6" />
+      <div className="bg-black/20 backdrop-blur-md border-b border-white/10 p-3 sm:p-4 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 sticky top-0 z-20">
+        <div className="flex items-center gap-2 sm:gap-4 w-full sm:w-auto">
+            <button onClick={onCancel} className="p-2 hover:bg-white/10 rounded-full transition shrink-0" title="Back">
+                <ArrowLeft className="w-5 h-5 sm:w-6 sm:h-6" />
             </button>
-            <h2 className="text-xl font-bold flex items-center gap-2">
-                <LayoutGrid className="w-5 h-5 text-purple-300" /> Quiz Creator
+            <h2 className="text-base sm:text-xl font-bold flex items-center gap-2">
+                <LayoutGrid className="w-4 h-4 sm:w-5 sm:h-5 text-purple-300" /> 
+                <span className="truncate">Quiz Creator</span>
             </h2>
         </div>
-        <div className="flex items-center gap-3">
+        <div className="flex items-center gap-2 w-full sm:w-auto justify-end">
           {saveMessage && (
-            <div className={`px-4 py-2 rounded-lg text-sm font-semibold ${
+            <div className={`hidden sm:block px-4 py-2 rounded-lg text-sm font-semibold ${
               saveMessage.type === 'success' ? 'bg-green-500/20 text-green-300 border border-green-500/30' : 'bg-red-500/20 text-red-300 border border-red-500/30'
             }`}>
               {saveMessage.text}
@@ -202,16 +204,22 @@ const QuizCreator: React.FC<Props> = ({ onSave, onCancel }) => {
           <button 
             onClick={handleSaveToLibrary} 
             disabled={!canSave || saving}
-            className="bg-purple-600 hover:bg-purple-700 text-white px-6 py-2 rounded-full font-bold hover:scale-105 transition-transform disabled:opacity-50 disabled:scale-100 flex items-center gap-2 shadow-lg"
+            className="bg-purple-600 hover:bg-purple-700 text-white px-3 sm:px-6 py-2 rounded-full font-bold hover:scale-105 transition-transform disabled:opacity-50 disabled:scale-100 flex items-center gap-1 sm:gap-2 shadow-lg text-sm sm:text-base"
+            title="Save to Library"
           >
-            <Database className="w-4 h-4" /> {saving ? 'Saving...' : 'Save to Library'}
+            <Database className="w-4 h-4" /> 
+            <span className="hidden sm:inline">{saving ? 'Saving...' : 'Save to Library'}</span>
+            <span className="sm:hidden">Save</span>
           </button>
           <button 
             onClick={handleSaveQuiz} 
             disabled={!canSave}
-            className="bg-white text-[#46178f] px-6 py-2 rounded-full font-bold hover:scale-105 transition-transform disabled:opacity-50 disabled:scale-100 flex items-center gap-2 shadow-lg"
+            className="bg-white text-[#46178f] px-3 sm:px-6 py-2 rounded-full font-bold hover:scale-105 transition-transform disabled:opacity-50 disabled:scale-100 flex items-center gap-1 sm:gap-2 shadow-lg text-sm sm:text-base"
+            title="Save & Host"
           >
-            <Save className="w-4 h-4" /> Save & Host
+            <Save className="w-4 h-4" /> 
+            <span className="hidden sm:inline">Save & Host</span>
+            <span className="sm:hidden">Host</span>
           </button>
         </div>
       </div>

@@ -89,13 +89,17 @@ export const getGameHistory = async (userId: string): Promise<GameHistory[]> => 
 
 export const getQuizHistory = async (userId: string, quizId: string): Promise<GameHistory[]> => {
   const historyRef = collection(firestore, 'users', userId, 'gameHistory');
-  const q = query(historyRef, where('quizId', '==', quizId), orderBy('endedAt', 'desc'));
+  const q = query(historyRef, where('quizId', '==', quizId));
   const snapshot = await getDocs(q);
 
-  return snapshot.docs.map(doc => ({
+  // Sort in memory instead of using Firestore orderBy to avoid index requirement
+  const history = snapshot.docs.map(doc => ({
     id: doc.id,
     ...doc.data(),
     startedAt: doc.data().startedAt?.toDate(),
     endedAt: doc.data().endedAt?.toDate()
   })) as GameHistory[];
+
+  // Sort by endedAt descending
+  return history.sort((a, b) => b.endedAt.getTime() - a.endedAt.getTime());
 };

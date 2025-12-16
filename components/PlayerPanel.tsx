@@ -38,9 +38,13 @@ interface PlayerSession {
 }
 
 const PlayerPanel: React.FC = () => {
+  // Get PIN from URL query parameter if present
+  const urlParams = new URLSearchParams(window.location.search);
+  const pinFromUrl = urlParams.get('pin') || '';
+  
   const [joined, setJoined] = useState(false);
   const [name, setName] = useState("");
-  const [pin, setPin] = useState("");
+  const [pin, setPin] = useState(pinFromUrl);
   const [selectedAvatar, setSelectedAvatar] = useState(0);
   const [customPhoto, setCustomPhoto] = useState<string | null>(null);
   const [showCamera, setShowCamera] = useState(false);
@@ -188,6 +192,36 @@ const PlayerPanel: React.FC = () => {
         }
      }
   }, [hostState?.gameState, hostState?.resultInfo, hasAnswered, mySelectedAnswerIdx, textAnswer]);
+
+  // Check if game still exists after waiting for hostState
+  useEffect(() => {
+    if (joined && !hostState && pin) {
+      console.log('Waiting for hostState to load for PIN:', pin);
+      // Wait a bit for hostState to load
+      const timer = setTimeout(async () => {
+        console.log('Checking if game exists after timeout...');
+        // Still no hostState after waiting, check if game exists
+        try {
+          const gameExists = await checkGameExists(pin);
+          console.log('Game exists check result:', gameExists);
+          if (!gameExists) {
+            // Game doesn't exist, clear session and return to join screen
+            console.log('Game no longer exists, returning to join screen');
+            alert('Game not found! The host may have ended the game.');
+            localStorage.removeItem(STORAGE_KEY);
+            setJoined(false);
+            setPin('');
+            setName('');
+            setHostState(null);
+          }
+        } catch (error) {
+          console.error('Error checking game existence:', error);
+        }
+      }, 3000); // Wait 3 seconds for hostState to load
+      
+      return () => clearTimeout(timer);
+    }
+  }, [joined, hostState, pin]);
 
   const startCamera = async () => {
     try {
@@ -349,7 +383,9 @@ const PlayerPanel: React.FC = () => {
               <div>
                 <p className="text-gray-700 font-bold text-sm mb-3 text-center uppercase tracking-wider">Choose Your Character</p>
                 
-                {/* Custom Photo Option */}
+                {/* Custom Photo Option - HIDDEN FOR NOW */}
+                {/* Uncomment below to enable custom photo feature */}
+                {/*
                 {customPhoto ? (
                   <div className="mb-3 flex items-center gap-3 bg-gray-100 p-3 rounded-xl">
                     <img src={customPhoto} alt="Your photo" className="w-16 h-16 rounded-full object-cover border-4 border-[#46178f]" />
@@ -394,6 +430,7 @@ const PlayerPanel: React.FC = () => {
                     <User className="w-5 h-5" /> Take Your Photo
                   </button>
                 )}
+                */}
                 
                 <div className="grid grid-cols-4 gap-2 max-h-48 overflow-y-auto p-1">
                   {AVATARS.map((avatar, idx) => {
@@ -436,57 +473,16 @@ const PlayerPanel: React.FC = () => {
     );
   }
 
-  // Check if game still exists after waiting for hostState
-  useEffect(() => {
-    if (joined && !hostState && pin) {
-      // Wait a bit for hostState to load
-      const timer = setTimeout(async () => {
-        // Still no hostState after waiting, check if game exists
-        const gameExists = await checkGameExists(pin);
-        if (!gameExists) {
-          // Game doesn't exist, clear session and return to join screen
-          console.log('Game no longer exists, returning to join screen');
-          localStorage.removeItem(STORAGE_KEY);
-          setJoined(false);
-          setPin('');
-          setName('');
-          setHostState(null);
-        }
-      }, 2000); // Wait 2 seconds for hostState to load
-      
-      return () => clearTimeout(timer);
-    }
-  }, [joined, hostState, pin]);
-
   // Show lobby screen if in LOBBY state OR if just joined and waiting for host state
   if (hostState?.gameState === GameState.LOBBY || (joined && !hostState)) {
       console.log('Showing lobby screen. hostState:', hostState);
       return (
-          <div style={{
-            minHeight: '100vh',
-            display: 'flex',
-            flexDirection: 'column',
-            alignItems: 'center',
-            justifyContent: 'center',
-            padding: '32px 32px 80px',
-            background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
-            color: 'white',
-            textAlign: 'center'
-          }}>
-              <div style={{
-                background: 'rgba(255, 255, 255, 0.2)',
-                backdropFilter: 'blur(10px)',
-                padding: '32px',
-                borderRadius: '24px',
-                marginBottom: '32px',
-                boxShadow: '0 20px 60px rgba(0,0,0,0.3)'
-              }}>
-                  <h1 style={{ fontSize: '36px', fontWeight: '900', marginBottom: '8px' }}>You're in!</h1>
-                  <p style={{ fontSize: '20px', fontWeight: '700', opacity: 0.8 }}>See your name on screen?</p>
+          <div className="min-h-screen flex flex-col items-center justify-center p-8 pb-20 text-white text-center" style={{ background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)' }}>
+              <div className="bg-white/20 backdrop-blur-md p-8 rounded-3xl mb-8 shadow-2xl">
+                  <h1 className="text-4xl font-black mb-2">You're in!</h1>
+                  <p className="text-xl font-bold opacity-80">See your name on screen?</p>
               </div>
-              <div style={{ animation: 'spin 1s linear infinite', color: 'rgba(255,255,255,0.5)' }}>
-                <Loader2 style={{ width: '48px', height: '48px' }} />
-              </div>
+              <Loader2 className="w-12 h-12 animate-spin text-white/50" />
               <Footer />
           </div>
       );
@@ -587,8 +583,15 @@ const PlayerPanel: React.FC = () => {
                   </div>
                 </div>
 
-                <div className="w-full max-w-md">
-                     <h2 className="text-[#46178f] font-black text-2xl mb-8 text-center uppercase tracking-wide">
+                <div className="w-full max-w-2xl px-4">
+                     {/* Question Text */}
+                     <div className="bg-white/90 backdrop-blur-sm p-6 rounded-2xl shadow-xl mb-6">
+                        <p className="text-gray-800 font-bold text-xl sm:text-2xl text-center leading-relaxed">
+                          {currentQ?.text}
+                        </p>
+                     </div>
+                     
+                     <h2 className="text-[#46178f] font-black text-xl sm:text-2xl mb-6 text-center uppercase tracking-wide">
                         {currentQ?.type === 'FILL_IN_THE_BLANK' ? "Fill in the blank" : "Type your answer"}
                      </h2>
                      <form onSubmit={submitTextAnswer} className="space-y-6">
@@ -596,13 +599,13 @@ const PlayerPanel: React.FC = () => {
                            value={textAnswer}
                            onChange={e => setTextAnswer(e.target.value)}
                            placeholder="Type here..."
-                           className="w-full border-b-4 border-gray-200 text-4xl font-black text-center py-4 focus:outline-none focus:border-[#46178f] text-gray-800 transition-colors placeholder:text-gray-300"
+                           className="w-full border-b-4 border-gray-200 text-2xl sm:text-4xl font-black text-center py-4 focus:outline-none focus:border-[#46178f] text-gray-800 transition-colors placeholder:text-gray-300"
                            autoFocus
                         />
                         <button 
-                          className="w-full bg-[#46178f] text-white py-6 rounded-2xl font-black text-2xl shadow-xl active:scale-95 transition-all flex items-center justify-center gap-3 hover:bg-[#35126f]"
+                          className="w-full bg-[#46178f] text-white py-4 sm:py-6 rounded-2xl font-black text-xl sm:text-2xl shadow-xl active:scale-95 transition-all flex items-center justify-center gap-3 hover:bg-[#35126f]"
                         >
-                           Submit Answer <Send className="w-6 h-6" />
+                           Submit Answer <Send className="w-5 h-5 sm:w-6 sm:h-6" />
                         </button>
                      </form>
                 </div>
@@ -613,15 +616,23 @@ const PlayerPanel: React.FC = () => {
 
       const isTF = currentQ?.type === 'TRUE_FALSE';
       return (
-          <div className="min-h-screen bg-gray-100 p-4 pb-20 flex flex-col relative z-50">
+          <div className="min-h-screen bg-gradient-to-br from-[#46178f] to-[#764ba2] p-3 sm:p-4 pb-24 flex flex-col items-center justify-center relative z-50">
               {/* Timer */}
-              <div className="flex justify-center mb-4">
-                <div className={`w-20 h-20 rounded-full border-4 ${isLowTime ? 'border-red-500 bg-red-500 animate-pulse' : 'border-[#46178f] bg-[#46178f]'} flex items-center justify-center shadow-xl transition-all`}>
-                  <span className="text-3xl font-black text-white">{timeLeft}</span>
+              <div className="mb-4 sm:mb-6">
+                <div className={`w-16 h-16 sm:w-20 sm:h-20 md:w-24 md:h-24 rounded-full border-4 sm:border-8 ${isLowTime ? 'border-red-500 bg-red-500 animate-pulse' : 'border-white bg-[#46178f]'} flex items-center justify-center shadow-2xl transition-all`}>
+                  <span className="text-2xl sm:text-3xl md:text-4xl font-black text-white">{timeLeft}</span>
                 </div>
               </div>
 
-              <div className="flex-1 grid grid-cols-2 gap-4 relative z-50">
+              {/* Question Text */}
+              <div className="bg-white p-4 sm:p-8 md:p-12 rounded-2xl sm:rounded-3xl shadow-2xl mb-4 sm:mb-8 w-full max-w-4xl">
+                <p className="text-[#46178f] font-black text-xl sm:text-3xl md:text-4xl lg:text-5xl text-center leading-tight">
+                  {currentQ?.text}
+                </p>
+              </div>
+
+              {/* Answer Buttons */}
+              <div className={`w-full max-w-4xl px-2 ${isTF ? 'flex flex-col sm:flex-row gap-3 sm:gap-4' : 'grid grid-cols-2 gap-3 sm:gap-4'}`}>
                   {SHAPES.slice(0, isTF ? 2 : 4).map((shape, idx) => {
                       const Icon = shape.icon;
                       return (
@@ -631,13 +642,13 @@ const PlayerPanel: React.FC = () => {
                                 console.log('Button clicked:', idx);
                                 submitAnswer(idx);
                             }}
-                            className={`${shape.color} ${shape.shadow} rounded-xl flex flex-col items-center justify-center shadow-[0_8px_0_rgba(0,0,0,0.2)] active:shadow-none active:translate-y-[8px] transition-all cursor-pointer touch-manipulation`}
+                            className={`${shape.color} ${shape.shadow} rounded-xl sm:rounded-2xl flex items-center ${isTF ? 'justify-start px-4 sm:px-8' : 'justify-center flex-col sm:flex-row'} gap-2 sm:gap-4 py-4 sm:py-6 shadow-[0_8px_0_rgba(0,0,0,0.2)] active:shadow-none active:translate-y-[8px] transition-all cursor-pointer touch-manipulation ${isTF ? 'flex-1' : 'min-h-[100px] sm:min-h-[120px]'}`}
                         >
-                            <div className="bg-black/20 p-4 rounded-xl mb-4">
-                                <Icon className="w-12 h-12 md:w-20 md:h-20 text-white fill-current" />
+                            <div className="bg-black/20 p-2 sm:p-3 rounded-lg sm:rounded-xl">
+                                <Icon className="w-8 h-8 sm:w-10 sm:h-10 md:w-12 md:h-12 text-white fill-current" />
                             </div>
                             {isTF && (
-                                <span className="text-white font-black text-3xl uppercase tracking-wider text-shadow">
+                                <span className="text-white font-black text-xl sm:text-2xl md:text-3xl uppercase tracking-wider">
                                     {idx === 0 ? "True" : "False"}
                                 </span>
                             )}

@@ -3,7 +3,7 @@ import { useAuth } from '../contexts/AuthContext';
 import { getQuizzes, deleteQuiz } from '../services/quizService';
 import { getQuizHistory, GameHistory } from '../services/gameHistoryService';
 import { Quiz } from '../types';
-import { Trash2, Play, ArrowLeft, Search, History, Trophy, Users, Calendar, Clock, ChevronDown, ChevronUp, X } from 'lucide-react';
+import { Trash2, Play, ArrowLeft, Search, History, Trophy, Users, Calendar, Clock, ChevronDown, ChevronUp, X, Pencil } from 'lucide-react';
 import { calculateGameDuration } from '../utils/quizUtils';
 
 interface SavedQuiz extends Quiz {
@@ -14,10 +14,11 @@ interface SavedQuiz extends Quiz {
 
 interface QuizLibraryProps {
   onLoadQuiz: (quiz: Quiz) => void;
+  onEditQuiz: (quiz: Quiz) => void;
   onBack: () => void;
 }
 
-const QuizLibrary: React.FC<QuizLibraryProps> = ({ onLoadQuiz, onBack }) => {
+const QuizLibrary: React.FC<QuizLibraryProps> = ({ onLoadQuiz, onEditQuiz, onBack }) => {
   const { user } = useAuth();
   const [quizzes, setQuizzes] = useState<SavedQuiz[]>([]);
   const [loading, setLoading] = useState(true);
@@ -301,6 +302,14 @@ const QuizLibrary: React.FC<QuizLibraryProps> = ({ onLoadQuiz, onBack }) => {
                     >
                       <Play className="w-4 h-4" />
                       <span>Load</span>
+                    </button>
+                    
+                    <button
+                      onClick={() => onEditQuiz(quiz)}
+                      className="px-3 py-2 bg-blue-600/80 hover:bg-blue-600 rounded-lg transition-all duration-200"
+                      title="Edit quiz"
+                    >
+                      <Pencil className="w-4 h-4" />
                     </button>
                     
                     <button
