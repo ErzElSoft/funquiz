@@ -1,5 +1,5 @@
 <div align="center">
-<img width="1200" height="475" alt="GHBanner" src="https://erzelsoft.com/wp-content/uploads/2025/11/logo-1024x466-1.png" />
+<img width="1200" height="475" alt="GHBanner" src="https://erzelsoft.com/wp-content/uploads/2025/11/erzelsoft-logo-1-1536x699.png" />
 </div>
 
 # Run and deploy your AI Studio app
