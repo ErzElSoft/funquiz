@@ -72,7 +72,7 @@ const HostResultsScreen: React.FC<Props> = ({ question, answers, onNext, isLast 
   };
 
   return (
-    <div className="flex flex-col h-full w-full max-w-7xl mx-auto p-8 pb-20">
+    <div className="flex flex-col min-h-full w-full max-w-7xl mx-auto p-4 md:p-8 pb-24 overflow-y-auto">
         <div className="flex-1 flex flex-col md:flex-row gap-12 items-end mb-4">
             {isTextType ? renderTextResults() : renderChart()}
             
